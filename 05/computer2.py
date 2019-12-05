@@ -1,4 +1,5 @@
-from collections import namedtuple
+import operator
+from collections import namedtuple, deque
 from enum import IntEnum
 
 
@@ -15,18 +16,18 @@ class DisStyle(IntEnum):
     COND_JUMP = 4  # (P1) goto P2
 
 
-OpCodes = namedtuple('OpCodes', 'num instruction length dis_style')
+OpCodes = namedtuple('OpCodes', 'num instruction length op dis_style')
 
 opcode_list = {
-    1: OpCodes(1, 'ADD', 4, DisStyle.THREE_PARAM),
-    2: OpCodes(2, 'MUL', 4, DisStyle.THREE_PARAM),
-    3: OpCodes(3, 'INP', 2, DisStyle.IN_PARAM),
-    4: OpCodes(4, 'OUT', 2, DisStyle.OUT_PARAM),
-    5: OpCodes(5, 'JNZ', 3, DisStyle.COND_JUMP),
-    6: OpCodes(6, 'JZ', 3, DisStyle.COND_JUMP),
-    7: OpCodes(7, 'LT', 4, DisStyle.THREE_PARAM),
-    8: OpCodes(8, 'EQ', 4, DisStyle.THREE_PARAM),
-    99: OpCodes(99, 'HLT', 1, DisStyle.NO_PARAM)
+    1: OpCodes(1, 'ADD', 4, operator.add, DisStyle.THREE_PARAM),
+    2: OpCodes(2, 'MUL', 4, operator.mul, DisStyle.THREE_PARAM),
+    3: OpCodes(3, 'INP', 2, None, DisStyle.IN_PARAM),
+    4: OpCodes(4, 'OUT', 2, None, DisStyle.OUT_PARAM),
+    5: OpCodes(5, 'JNZ', 3, lambda x: x != 0, DisStyle.COND_JUMP),
+    6: OpCodes(6, 'JZ', 3, lambda x: x == 0, DisStyle.COND_JUMP),
+    7: OpCodes(7, 'LT', 4, (lambda x, y: 1 if x < y else 0), DisStyle.THREE_PARAM),
+    8: OpCodes(8, 'EQ', 4, (lambda x, y: 1 if x == y else 0), DisStyle.THREE_PARAM),
+    99: OpCodes(99, 'HLT', 1, None, DisStyle.NO_PARAM)
 }
 
 
@@ -36,21 +37,33 @@ def prepare_mem(init_mem: str):
 
 class Processor(object):
     def __init__(self, mem_str: str):
+        self._core = []
         self._mem_str = mem_str
-        self._memory = prepare_mem(mem_str)
+        self._ip = 0
+        self._input = deque()
+        self.reset_core()
+
+    def reset_core(self):
+        self._core = prepare_mem(self._mem_str)
+        self._input.clear()
         self._ip = 0
 
     def current_instruction(self):
-        return opcode_list[int(self._memory[self._ip] % 100)]
+        return opcode_list[int(self.core[self.ip] % 100)]
 
-    def parameter(self, param_num, as_str=False):
-        instr = f'000000{str(self._memory[self._ip])}'[-5:]
-        mode = int(instr[-2 - param_num])
-        param = self._memory[self.ip + param_num]
-        if as_str:
-            return f'[{param}]' if mode == AccessMode.PARAMETER else f'#{param}'
+    def parameter(self, param_num, as_str=False, target=False):
+        if 0 < param_num < self.current_instruction().length:
+            mode = AccessMode((self.core[self.ip] // 10 ** (param_num + 1)) % 10)
+            param = self.core[self.ip + param_num]
+            if as_str:
+                return f'[{param}]' if mode == AccessMode.PARAMETER else f'#{param}'
+            else:
+                if target:
+                    return param
+                else:
+                    return self.core[param] if mode == AccessMode.PARAMETER else param
         else:
-            return self._memory[param] if mode == AccessMode.PARAMETER else param
+            raise OverflowError(f'Incorrect parameter number: {param_num} at instruction {self.ip}')
 
     @property
     def ip(self):
@@ -58,121 +71,73 @@ class Processor(object):
 
     @ip.setter
     def ip(self, val):
-        if isinstance(val, int) and 0 <= val < len(self._memory):
+        if isinstance(val, int) and 0 <= val < len(self.core):
             self._ip = val
         else:
             raise ValueError('IP can only be set to a positive integer within code space')
 
     @property
-    def memory(self):
-        return self._memory
+    def core(self):
+        return self._core
 
-
-def computer(cells):
-    memory = prepare_mem(cells)
-    memory = simulate(memory)
-    return ','.join(str(v) for v in memory)
-
-
-def param_read(memory, param, mode):
-    if mode == AccessMode.PARAMETER:
-        return memory[memory[param]]
-    elif mode == AccessMode.IMMEDIATE:
-        return memory[param]
-    raise ValueError('Bad memory access mode')
-
-
-def simulate(memory, inputs=None):
-    ip = 0
-    user_input_vec = 0
-    while memory[ip] != 99:
-        instr = f'000000{str(memory[ip])}'[-5:]
-        op = int(instr[-2:])
-        mode = [int(instr[n]) for n in range(-3, -6, -1)]
-        if op == 1:
-            memory[memory[ip + 3]] = param_read(memory, ip + 1, mode[0]) + param_read(memory, ip + 2, mode[1])
-            ip += 4
-        elif op == 2:
-            memory[memory[ip + 3]] = param_read(memory, ip + 1, mode[0]) * param_read(memory, ip + 2, mode[1])
-            ip += 4
-        elif op == 3:
-            if inputs and user_input_vec < len(inputs):
-                user_input = inputs[user_input_vec]
-                user_input_vec += 1
-            else:
-                user_input = input('Enter Value: ')
-            memory[memory[ip + 1]] = user_input
-            ip += 2
-        elif op == 4:
-            res = param_read(memory, ip + 1, mode[0])
-            print(f'Result: {res}')
-            ip += 2
-        elif op == 5:
-            if param_read(memory, ip + 1, mode[0]) != 0:
-                ip = param_read(memory, ip + 2, mode[1])
-            else:
-                ip += 3
-        elif op == 6:
-            if param_read(memory, ip + 1, mode[0]) == 0:
-                ip = param_read(memory, ip + 2, mode[1])
-            else:
-                ip += 3
-        elif op == 7:
-            memory[memory[ip + 3]] = 1 if param_read(memory, ip + 1, mode[0]) < param_read(memory, ip + 2,
-                                                                                           mode[1]) else 0
-            ip += 4
-        elif op == 8:
-            memory[memory[ip + 3]] = 1 if param_read(memory, ip + 1, mode[0]) == param_read(memory, ip + 2,
-                                                                                            mode[1]) else 0
-            ip += 4
+    def opcode(self, instruction: OpCodes):
+        ip = self.ip
+        op, *param = self.core[ip:ip + instruction.length]
+        dump = f'{op:05} ' + " ".join(f'{v:5}' for v in param)
+        if instruction.dis_style == DisStyle.THREE_PARAM:
+            return f'{dump:23} : {self.parameter(3, True)} ← {self.parameter(1, True)} ' \
+                   f'{instruction.instruction} {self.parameter(2, True)} '
+        elif instruction.dis_style == DisStyle.IN_PARAM:
+            return f'{dump:23} : {self.parameter(1, True)} ← {instruction.instruction}'
+        elif instruction.dis_style == DisStyle.OUT_PARAM:
+            return f'{dump:23} : {instruction.instruction} ← {self.parameter(1, True)}'
+        elif instruction.dis_style == DisStyle.COND_JUMP:
+            return f'{dump:23} : {instruction.instruction} ({self.parameter(1, True)}) {self.parameter(2, True)}'
         else:
-            raise TypeError
-    return memory
+            return f'{dump:23} : HALT'
 
+    def step(self):
+        inst = self.current_instruction()
+        if inst.dis_style == DisStyle.THREE_PARAM:
+            self.core[self.parameter(3, target=True)] = inst.op(self.parameter(1), self.parameter(2))
+        elif inst.dis_style == DisStyle.IN_PARAM:
+            self.core[self.parameter(1, target=True)] = self._input.pop()
+        elif inst.dis_style == DisStyle.OUT_PARAM:
+            print(f'OUT({self.ip:05}) → {self.parameter(1)}')
+        elif inst.dis_style == DisStyle.COND_JUMP:
+            if inst.op(self.parameter(1)):
+                self.ip = self.parameter(2)
+                return
+        elif inst.dis_style == DisStyle.NO_PARAM:
+            raise GeneratorExit(f'Halt at {self.ip}')
+        self.ip += inst.length
 
-def run_computer_recover(cells):
-    memory = prepare_mem(cells)
-    memory[1] = 12
-    memory[2] = 2
-    memory = simulate(memory)
-    print(memory[0])
+    def simulate(self, inputs=None, trace=False):
+        if inputs:
+            self._input.extendleft(inputs)
+        while self.ip < len(self.core):
+            if trace:
+                inst = self.current_instruction()
+                print(f'{self.ip:05} : {self.opcode(inst)}')
+            try:
+                self.step()
+            except GeneratorExit:
+                break
 
+    def disassemble(self, patch: str or None = None, start_at=None, end_at=None):
+        if patch:
+            for s in patch.split(','):
+                a, v = [int(x) for x in s.split(':')]
+                self.core[a] = v
+        if start_at:
+            self.ip = start_at
+        if not end_at:
+            end_at = len(self.core)
 
-OPCODES = {1: '+', 2: '*', 3: '←', 4: 'out', 5: 'jnz', 6: 'jz', 7: 'lt', 8: 'eq', 99: 'halt'}
-
-
-def opcode(instruction: OpCodes, processor: Processor):
-    ip = processor.ip
-    op, *param = processor.memory[ip:ip + instruction.length]
-    dump = f'{op:05} ' + " ".join(f'{v:03}' for v in param)
-    if instruction.dis_style == DisStyle.THREE_PARAM:
-        return f'{dump:20} : {processor.parameter(3, True)} ← {processor.parameter(1, True)} ' \
-               f'{instruction.instruction} {processor.parameter(2, True)} '
-    elif instruction.dis_style == DisStyle.IN_PARAM:
-        return f'{dump:20} : {processor.parameter(1, True)} ← {instruction.instruction}'
-    elif instruction.dis_style == DisStyle.OUT_PARAM:
-        return f'{dump:20} : {instruction.instruction} ← {processor.parameter(1, True)}'
-    elif instruction.dis_style == DisStyle.COND_JUMP:
-        return f'{dump:20} : {instruction.instruction} ({processor.parameter(1, True)}) {processor.parameter(2, True)}'
-    else:
-        return f'{dump:20} : HALT'
-
-
-def disassemble(cells: str, patch: str or None = None, start_at=None, end_at=None):
-    p = Processor(cells)
-    if patch:
-        for s in patch.split(','):
-            a, v = [int(x) for x in s.split(':')]
-            p.memory[a] = v
-    if start_at:
-        p.ip = start_at
-    if not end_at:
-        end_at = len(p.memory)
-
-    while p.ip < end_at:
-        inst = p.current_instruction()
-        print(f'{p.ip:05} : {opcode(inst, p)}')
-        p.ip += inst.length
+        while self.ip < end_at:
+            inst = self.current_instruction()
+            print(f'{self.ip:05} : {self.opcode(inst)}')
+            self.ip += inst.length
 
 
 if __name__ == '__main__':
@@ -203,15 +168,200 @@ if __name__ == '__main__':
                     '226,224,102,2,223,223,1006,224,614,1001,223,1,223,8,226,677,224,102,2,223,223,1006,224,629,1001,' \
                     '223,1,223,107,226,226,224,102,2,223,223,1005,224,644,101,1,223,223,8,226,226,224,102,2,223,223,' \
                     '1006,224,659,101,1,223,223,7,226,677,224,102,2,223,223,1005,224,674,101,1,223,223,4,223,99,226 '
-    print('Part 1')
-    memory = prepare_mem(initial_cells)
-    simulate(memory, [1])
-    print('Part 2')
-    memory = prepare_mem(initial_cells)
-    simulate(memory, [5])
+    computer = Processor(initial_cells)
 
-    # disassemble(initial_cells, patch="6:1101", end_at=223)
+    print('Part 1')
+    computer.simulate([1], trace=True)
+    print('Part 2')
+    computer.reset_core()
+    computer.simulate([5], trace=True)
+
+    '''
+    Part 1
+    00000 : 00003   225             : [225] ← INP
+    00002 : 00001   225     6     6 : [6] ← [225] ADD [6] 
+    00006 : 01101     1   238   225 : [225] ← #1 ADD #238 
+    00010 : 00104     0             : OUT ← #0
+    OUT(00010) → 0
+    00012 : 01101    86     8   225 : [225] ← #86 ADD #8 
+    00016 : 01101    82    69   225 : [225] ← #82 ADD #69 
+    00020 : 00101    36    65   224 : [224] ← #36 ADD [65] 
+    00024 : 01001   224  -106   224 : [224] ← [224] ADD #-106 
+    00028 : 00004   224             : OUT ← [224]
+    OUT(00028) → 0
+    00030 : 01002   223     8   223 : [223] ← [223] MUL #8 
+    00034 : 01001   224     5   224 : [224] ← [224] ADD #5 
+    00038 : 00001   223   224   223 : [223] ← [223] ADD [224] 
+    00042 : 00102    52   148   224 : [224] ← #52 MUL [148] 
+    00046 : 00101 -1144   224   224 : [224] ← #-1144 ADD [224] 
+    00050 : 00004   224             : OUT ← [224]
+    OUT(00050) → 0
+    00052 : 01002   223     8   223 : [223] ← [223] MUL #8 
+    00056 : 00101     1   224   224 : [224] ← #1 ADD [224] 
+    00060 : 00001   224   223   223 : [223] ← [224] ADD [223] 
+    00064 : 01102    70    45   225 : [225] ← #70 MUL #45 
+    00068 : 01002   143    48   224 : [224] ← [143] MUL #48 
+    00072 : 01001   224 -1344   224 : [224] ← [224] ADD #-1344 
+    00076 : 00004   224             : OUT ← [224]
+    OUT(00076) → 0
+    00078 : 00102     8   223   223 : [223] ← #8 MUL [223] 
+    00082 : 00101     7   224   224 : [224] ← #7 ADD [224] 
+    00086 : 00001   223   224   223 : [223] ← [223] ADD [224] 
+    00090 : 01101    69    75   225 : [225] ← #69 ADD #75 
+    00094 : 01001    18    85   224 : [224] ← [18] ADD #85 
+    00098 : 01001   224  -154   224 : [224] ← [224] ADD #-154 
+    00102 : 00004   224             : OUT ← [224]
+    OUT(00102) → 0
+    00104 : 00102     8   223   223 : [223] ← #8 MUL [223] 
+    00108 : 00101     2   224   224 : [224] ← #2 ADD [224] 
+    00112 : 00001   224   223   223 : [223] ← [224] ADD [223] 
+    00116 : 01101    15    59   225 : [225] ← #15 ADD #59 
+    00120 : 01102    67    42   224 : [224] ← #67 MUL #42 
+    00124 : 00101 -2814   224   224 : [224] ← #-2814 ADD [224] 
+    00128 : 00004   224             : OUT ← [224]
+    OUT(00128) → 0
+    00130 : 01002   223     8   223 : [223] ← [223] MUL #8 
+    00134 : 00101     3   224   224 : [224] ← #3 ADD [224] 
+    00138 : 00001   223   224   223 : [223] ← [223] ADD [224] 
+    00142 : 01101    28    63   225 : [225] ← #28 ADD #63 
+    00146 : 01101    45    22   225 : [225] ← #45 ADD #22 
+    00150 : 01101    90    16   225 : [225] ← #90 ADD #16 
+    00154 : 00002   152    92   224 : [224] ← [152] MUL [92] 
+    00158 : 01001   224 -1200   224 : [224] ← [224] ADD #-1200 
+    00162 : 00004   224             : OUT ← [224]
+    OUT(00162) → 0
+    00164 : 00102     8   223   223 : [223] ← #8 MUL [223] 
+    00168 : 00101     7   224   224 : [224] ← #7 ADD [224] 
+    00172 : 00001   223   224   223 : [223] ← [223] ADD [224] 
+    00176 : 01101    45    28   224 : [224] ← #45 ADD #28 
+    00180 : 01001   224   -73   224 : [224] ← [224] ADD #-73 
+    00184 : 00004   224             : OUT ← [224]
+    OUT(00184) → 0
+    00186 : 01002   223     8   223 : [223] ← [223] MUL #8 
+    00190 : 00101     7   224   224 : [224] ← #7 ADD [224] 
+    00194 : 00001   224   223   223 : [223] ← [224] ADD [223] 
+    00198 : 00001    14   118   224 : [224] ← [14] ADD [118] 
+    00202 : 00101   -67   224   224 : [224] ← #-67 ADD [224] 
+    00206 : 00004   224             : OUT ← [224]
+    OUT(00206) → 0
+    00208 : 01002   223     8   223 : [223] ← [223] MUL #8 
+    00212 : 01001   224     2   224 : [224] ← [224] ADD #2 
+    00216 : 00001   223   224   223 : [223] ← [223] ADD [224] 
+    00220 : 00004   223             : OUT ← [223]
+    OUT(00220) → 10987514
+    00222 : 00099                   : HALT
+    Part 2
+    00000 : 00003   225             : [225] ← INP
+    00002 : 00001   225     6     6 : [6] ← [225] ADD [6] 
+    00006 : 01105     1   238       : JNZ (#1) #238
+    00238 : 01105     0 99999       : JNZ (#0) #99999
+    00241 : 01105   227   247       : JNZ (#227) #247
+    00247 : 01005   227 99999       : JNZ ([227]) #99999
+    00250 : 01005     0   256       : JNZ ([0]) #256
+    00256 : 01106   227 99999       : JZ (#227) #99999
+    00259 : 01106     0   265       : JZ (#0) #265
+    00265 : 01006     0 99999       : JZ ([0]) #99999
+    00268 : 01006   227   274       : JZ ([227]) #274
+    00274 : 01105     1   280       : JNZ (#1) #280
+    00280 : 00001   225   225   225 : [225] ← [225] ADD [225] 
+    00284 : 01101   294     0     0 : [0] ← #294 ADD #0 
+    00288 : 00105     1     0       : JNZ (#1) [0]
+    00294 : 01106     0   300       : JZ (#0) #300
+    00300 : 00001   225   225   225 : [225] ← [225] ADD [225] 
+    00304 : 01101   314     0     0 : [0] ← #314 ADD #0 
+    00308 : 00106     0     0       : JZ (#0) [0]
+    00314 : 00007   677   677   224 : [224] ← [677] LT [677] 
+    00318 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00322 : 01005   224   329       : JNZ ([224]) #329
+    00325 : 01001   223     1   223 : [223] ← [223] ADD #1 
+    00329 : 01008   226   226   224 : [224] ← [226] EQ #226 
+    00333 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00337 : 01005   224   344       : JNZ ([224]) #344
+    00340 : 01001   223     1   223 : [223] ← [223] ADD #1 
+    00344 : 01107   677   226   224 : [224] ← #677 LT #226 
+    00348 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00352 : 01006   224   359       : JZ ([224]) #359
+    00359 : 00107   677   677   224 : [224] ← #677 LT [677] 
+    00363 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00367 : 01005   224   374       : JNZ ([224]) #374
+    00370 : 00101     1   223   223 : [223] ← #1 ADD [223] 
+    00374 : 01108   677   226   224 : [224] ← #677 EQ #226 
+    00378 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00382 : 01005   224   389       : JNZ ([224]) #389
+    00385 : 01001   223     1   223 : [223] ← [223] ADD #1 
+    00389 : 01007   677   677   224 : [224] ← [677] LT #677 
+    00393 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00397 : 01005   224   404       : JNZ ([224]) #404
+    00404 : 01008   677   226   224 : [224] ← [677] EQ #226 
+    00408 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00412 : 01005   224   419       : JNZ ([224]) #419
+    00419 : 01108   226   677   224 : [224] ← #226 EQ #677 
+    00423 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00427 : 01006   224   434       : JZ ([224]) #434
+    00434 : 00008   677   226   224 : [224] ← [677] EQ [226] 
+    00438 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00442 : 01005   224   449       : JNZ ([224]) #449
+    00445 : 00101     1   223   223 : [223] ← #1 ADD [223] 
+    00449 : 01008   677   677   224 : [224] ← [677] EQ #677 
+    00453 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00457 : 01006   224   464       : JZ ([224]) #464
+    00464 : 01108   226   226   224 : [224] ← #226 EQ #226 
+    00468 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00472 : 01005   224   479       : JNZ ([224]) #479
+    00479 : 01007   226   677   224 : [224] ← [226] LT #677 
+    00483 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00487 : 01005   224   494       : JNZ ([224]) #494
+    00490 : 01001   223     1   223 : [223] ← [223] ADD #1 
+    00494 : 01007   226   226   224 : [224] ← [226] LT #226 
+    00498 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00502 : 01005   224   509       : JNZ ([224]) #509
+    00505 : 00101     1   223   223 : [223] ← #1 ADD [223] 
+    00509 : 00107   677   226   224 : [224] ← #677 LT [226] 
+    00513 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00517 : 01006   224   524       : JZ ([224]) #524
+    00524 : 00108   677   677   224 : [224] ← #677 EQ [677] 
+    00528 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00532 : 01006   224   539       : JZ ([224]) #539
+    00539 : 00007   677   226   224 : [224] ← [677] LT [226] 
+    00543 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00547 : 01006   224   554       : JZ ([224]) #554
+    00550 : 01001   223     1   223 : [223] ← [223] ADD #1 
+    00554 : 01107   226   677   224 : [224] ← #226 LT #677 
+    00558 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00562 : 01005   224   569       : JNZ ([224]) #569
+    00569 : 00108   677   226   224 : [224] ← #677 EQ [226] 
+    00573 : 01002   223     2   223 : [223] ← [223] MUL #2 
+    00577 : 01006   224   584       : JZ ([224]) #584
+    00580 : 00101     1   223   223 : [223] ← #1 ADD [223] 
+    00584 : 00108   226   226   224 : [224] ← #226 EQ [226] 
+    00588 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00592 : 01006   224   599       : JZ ([224]) #599
+    00599 : 01107   226   226   224 : [224] ← #226 LT #226 
+    00603 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00607 : 01006   224   614       : JZ ([224]) #614
+    00614 : 00008   226   677   224 : [224] ← [226] EQ [677] 
+    00618 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00622 : 01006   224   629       : JZ ([224]) #629
+    00629 : 00107   226   226   224 : [224] ← #226 LT [226] 
+    00633 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00637 : 01005   224   644       : JNZ ([224]) #644
+    00644 : 00008   226   226   224 : [224] ← [226] EQ [226] 
+    00648 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00652 : 01006   224   659       : JZ ([224]) #659
+    00655 : 00101     1   223   223 : [223] ← #1 ADD [223] 
+    00659 : 00007   226   677   224 : [224] ← [226] LT [677] 
+    00663 : 00102     2   223   223 : [223] ← #2 MUL [223] 
+    00667 : 01005   224   674       : JNZ ([224]) #674
+    00670 : 00101     1   223   223 : [223] ← #1 ADD [223] 
+    00674 : 00004   223             : OUT ← [223]
+    OUT(00674) → 14195011
+    00676 : 00099                   : HALT
+    '''
+
+    # computer.reset_core()
+    # computer.disassemble(patch="6:1101", end_at=223)
     # print('=' * 80)
-    # disassemble(initial_cells, patch="6:1105", end_at=9)
+    # computer.reset_core()
+    # computer.disassemble(patch="6:1105", end_at=9)
     # print('...')
-    # disassemble(initial_cells, patch="6:1105", start_at=238, end_at=677)
+    # computer.disassemble(patch="6:1105", start_at=238, end_at=677)
