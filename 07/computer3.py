@@ -181,9 +181,11 @@ class Amplifier(object):
         if isinstance(inputs, str):
             inputs = [int(v) for v in inputs.split(',')]
         p = self._amps[0]
+        p.reset_core()
         for n in self._amps[1:]:
             p._sender = n.receiver
             p = n
+            p.reset_core()
         self._amps[-1]._sender = self._amps[0].receiver
         threads = []
         for a, n in zip(self._amps, inputs):
@@ -212,11 +214,9 @@ if __name__ == '__main__':
     print('Part 2')
     res = []
     for inp in itertools.permutations(range(5, 10)):
+        print(f'Input sequence: {str(inp)}')
         res.append((inp, computer.run_regeneration(inp)))
     print(max(res, key=lambda x: x[1]))
-
-    # computer.reset_core()
-    # computer.simulate([5], trace=True)
 
     '''
     '''
