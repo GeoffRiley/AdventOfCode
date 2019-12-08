@@ -12,7 +12,6 @@ layer_counts = []
 for layer in layers:
     layer_counts.append(Counter(list(layer)))
 check_layer = min(layer_counts, key=lambda x: x['0'])
-# check_layer = max(layers,key=lambda x : sum(1 for c in x if c == '0'))
 zeros = check_layer['0']
 ones = check_layer['1']
 twos = check_layer['2']
@@ -26,3 +25,14 @@ for p in range(image_size):
     final_image += '#' if n[0] == '1' else ' '
 for w in range(0, image_size, width):
     print(final_image[w:w + width])
+'''
+Part 1
+2125
+Part 2
+  ## #   ##### #  # #### 
+   # #   #   # #  # #    
+   #  # #   #  #### ###  
+   #   #   #   #  # #    
+#  #   #  #    #  # #    
+ ##    #  #### #  # #    
+'''
