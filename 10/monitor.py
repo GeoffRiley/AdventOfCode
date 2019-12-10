@@ -4,7 +4,7 @@ from typing import List, Tuple, Any
 import numpy as np
 
 
-def cart2pol(x, y):
+def cart2pol(x, y) -> Tuple[float, float]:
     rho = np.hypot(x, y)
     phi = np.arctan2(y, x)
     return rho, phi
@@ -17,7 +17,7 @@ def create_map(text_map: str) -> List[list]:
     return asteroid_array
 
 
-def visible_list(asteroid_array, y, x):
+def visible_list(asteroid_array, y, x) -> List[Tuple[int,Tuple[int,int]]]:
     angles = defaultdict(list)
     for row in range(len(asteroid_array)):
         for col in range(len(asteroid_array[row])):
@@ -34,11 +34,11 @@ def visible_list(asteroid_array, y, x):
     return res
 
 
-def scan_from(asteroid_array, y, x):
+def scan_from(asteroid_array, y, x) -> int:
     return len(visible_list(asteroid_array, y, x))
 
 
-def find_best_station(asteroid_array: List[list]):
+def find_best_station(asteroid_array: List[list]) -> Tuple[Tuple[int, int], int]:
     findings = ((None, None), 0)
     for row in range(len(asteroid_array)):
         for col in range(len(asteroid_array[row])):
@@ -50,9 +50,8 @@ def find_best_station(asteroid_array: List[list]):
 
 
 def vapourise_asteroids(asteroid_array: List[list], coord: Tuple[int, int]) -> \
-        List[Tuple[Tuple[Any, Any], Tuple[int, int]]]:
+        List[Tuple[int, Tuple[int, int]]]:
     src_x, src_y = coord
-    # asteroid_coordinate = []
     vapourised = []
     asteroid_array[src_y][src_x] = 2  # identify our station
 
@@ -76,7 +75,7 @@ def vapourise_asteroids(asteroid_array: List[list], coord: Tuple[int, int]) -> \
             else:
                 vapourised.append(selected)
                 x, y = selected[1]
-                asteroid_array[y][x] = 3
+                asteroid_array[y][x] = 3  # Mark as destroyed
                 visible_asteroids.remove(selected)
     return vapourised
 
