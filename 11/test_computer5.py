@@ -1,6 +1,8 @@
 import pytest
 
-from computer5 import Processor, Amplifier
+from computer5 import Robot
+from intcode.intcode import Intcode
+from intcode.amplifier import Amplifier
 
 
 @pytest.mark.parametrize('cells, result', [
@@ -10,7 +12,7 @@ from computer5 import Processor, Amplifier
     ('1,1,1,4,99,5,6,0,99', '30,1,1,4,2,5,6,0,99')
 ])
 def test_computer(cells, result):
-    p = Processor(cells)
+    p = Intcode(cells)
     p.simulate(trace=True)
     assert ','.join(str(v) for v in p.core)[:len(result)] == result
 
@@ -43,7 +45,7 @@ def test_amplifiers_regen(cells, inputs, result):
     ('104,1125899906842624,99', [1125899906842624])
 ])
 def test_boost(cells, result):
-    p = Processor(cells)
-    p.simulate(trace=True)
-    print('\n'.join(p.get_log()))
+    p = Intcode(cells)
+    p.simulate(trace=False)
+    # print('\n'.join(p.get_log()))
     assert p.all_output == result
