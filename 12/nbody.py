@@ -20,6 +20,12 @@ class Point3D(object):
             self.z + other.z
         )
 
+    def __iadd__(self, other):
+        self.x += other.x
+        self.y += other.y
+        self.z += other.z
+        return self
+
     def __sub__(self, other):
         return Point3D(
             self.x - other.x,
@@ -28,11 +34,10 @@ class Point3D(object):
         )
 
     def __isub__(self, other):
-        return Point3D(
-            other.x - self.x,
-            other.y - self.y,
-            other.z - self.z
-        )
+        self.x -= other.x
+        self.y -= other.y
+        self.z -= other.z
+        return self
 
     def __str__(self):
         return f'<x={self.x:3}, y={self.y:3}, z={self.z:3}>'
@@ -135,6 +140,13 @@ class Moons(object):
             return '.'.join(f'{m.point.z}.{m.velocity.z}' for m in cluster.moons.values())
 
 
+def calc_lowest_common_multiple(num_list: iter):
+    lcm = num_list[0]
+    for b in num_list[1:]:
+        lcm = abs(lcm * b) // gcd(lcm, b)
+    return lcm
+
+
 if __name__ == '__main__':
     with open('input') as f:
         moon_str = f.read()
@@ -191,8 +203,7 @@ if __name__ == '__main__':
         done = all(r is not None for r in repeat_at.values())
     print(f'Repetitions on individual axes: {"; ".join(k + "=" + str(v) for k, v in repeat_at.items())}')
     rx, ry, rz = [v for v in repeat_at.values()]
-    lcm_xy = abs(rx * ry) // gcd(rx, ry)
-    lcm = abs(lcm_xy * rz) // gcd(lcm_xy, rz)
+    lcm = calc_lowest_common_multiple([rx, ry, rz])
     print(f'Lowest common repeat is at {lcm}')
     '''
     Repetitions on individual axes: x=186028; y=231614; z=102356
