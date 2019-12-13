@@ -154,6 +154,9 @@ class RobotPuck(object):
         self._update_polar()
         return self
 
+    def pos_str(self):
+        return f'{self.x:+05}.{self.y}'
+
 
 class Rect(object):
     def __init__(self, left_or_point=None, param2=None, param3=None, param4=None):
@@ -192,11 +195,17 @@ class Rect(object):
                 self._width = param3
                 self._height = param4
 
-    def include(self, pt: RobotPuck):
-        self.left = min(pt.x,self.left)
-        self.right = max(pt.x,self.right)
-        self.bottom = min(pt.y,self.bottom)
-        self.top = max(pt.y,self.top)
+    def include(self, pt: RobotPuck or tuple):
+        if isinstance(pt, tuple):
+            self.left = min(pt[0], self.left)
+            self.right = max(pt[0], self.right)
+            self.bottom = min(pt[1], self.bottom)
+            self.top = max(pt[1], self.top)
+        else:
+            self.left = min(pt.x, self.left)
+            self.right = max(pt.x, self.right)
+            self.bottom = min(pt.y, self.bottom)
+            self.top = max(pt.y, self.top)
 
     @property
     def bottom(self):
@@ -232,10 +241,9 @@ class Rect(object):
     def top(self, top):
         self._height = top - self.bottom
 
-
     @property
     def top_right(self):
-        return RobotPuck(self.left+self._width, self.bottom+self._height)
+        return RobotPuck(self.left + self._width, self.bottom + self._height)
 
     @property
     def bottom_left(self):

@@ -58,6 +58,7 @@ class Intcode(object):
         self.reset_core()
         self._verbose = False
         self._sender = None
+        self._receiver = None
 
     def reset_core(self):
         self._log.clear()
@@ -149,8 +150,9 @@ class Intcode(object):
     def all_output(self):
         return [v for v in self._output]
 
-    def connect(self, receiver):
+    def connect(self, receiver, sender=None):
         self._sender = receiver
+        self._receiver = sender
 
     def opcode(self, instruction: OpCodes, trace=False):
         ip = self.ip
@@ -191,7 +193,12 @@ class Intcode(object):
         if inst.dis_style == DisStyle.THREE_PARAM:
             self.core[self.parameter(3, target=True)] = inst.op(self.parameter(1), self.parameter(2))
         elif inst.dis_style == DisStyle.IN_PARAM:
-            self.core[self.parameter(1, target=True)] = self._wait_for_input(trace=trace)
+            if self._receiver:
+                if trace:
+                    self.log(f'        Requesting input (@{self.ip:05})')
+                self.core[self.parameter(1, target=True)] = self._receiver()
+            else:
+                self.core[self.parameter(1, target=True)] = self._wait_for_input(trace=trace)
         elif inst.dis_style == DisStyle.OUT_PARAM:
             if trace:
                 self.log(f'        Sending out (@{self.ip:05}) → {self.parameter(1)}')
