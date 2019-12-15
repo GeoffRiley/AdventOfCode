@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from enum import IntEnum
 
 
@@ -155,7 +156,7 @@ class RobotPuck(object):
         return self
 
     def pos_str(self):
-        return f'{self.x:+05}.{self.y}'
+        return f'{self.x:+05},{self.y:+05}'
 
 
 class Rect(object):
@@ -270,3 +271,19 @@ class Rect(object):
 
     def __str__(self):
         return f'{self.__class__.__name__}({self.bottom_left}, {self.top_right})'
+
+
+@dataclass
+class Spot(object):
+    x: int = 0
+    y: int = 0
+
+    def as_tuple(self):
+        return self.x, self.y
+
+    def __str__(self):
+        return f'{self.x},{self.y}'
+
+
+def sign(x):
+    return -1 if x < 0 else 0 if x == 0 else 1

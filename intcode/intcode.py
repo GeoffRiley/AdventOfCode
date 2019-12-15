@@ -59,6 +59,7 @@ class Intcode(object):
         self._verbose = False
         self._sender = None
         self._receiver = None
+        self._nmi = False
 
     def reset_core(self):
         self._log.clear()
@@ -68,6 +69,7 @@ class Intcode(object):
         self._ip = 0
         self._relative_base = 0
         self._verbose = False
+        self._nmi = False
 
     def log(self, msg):
         self._log.append(msg)
@@ -223,7 +225,7 @@ class Intcode(object):
         self.log('Begin simulation' + (f' with default inputs {inputs}' if inputs is not None else ''))
         if inputs:
             self._input.extendleft(inputs)
-        while self.ip < len(self.core):
+        while self.ip < len(self.core) and not self._nmi:
             if trace:
                 inst = self.current_instruction()
                 self.log(f'{self.ip:05} : {self.opcode(inst, trace=trace)}')
@@ -234,7 +236,6 @@ class Intcode(object):
 
     def disassemble(self, patch: str or None = None, start_at=None, end_at=None):
         end_at = self._setup_patched_dump(end_at, patch, start_at) + 1
-
         try:
             while self.ip < end_at:
                 inst = self.current_instruction()
@@ -246,7 +247,6 @@ class Intcode(object):
 
     def dump(self, patch: str or None = None, start_at=None, end_at=None):
         end_at = self._setup_patched_dump(end_at, patch, start_at) + 1
-
         while self.ip < end_at:
             s = []
             for i in range(min(end_at - self.ip, 10)):
@@ -264,3 +264,7 @@ class Intcode(object):
         if not end_at:
             end_at = len(self.core)
         return end_at
+
+    def nmi(self, interrupt: bool):
+        if isinstance(interrupt, bool) and interrupt:
+            self._nmi = interrupt
