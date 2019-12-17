@@ -7,7 +7,7 @@ def is_nice(name: str) -> bool:
 
 
 def is_nicer(name: str) -> bool:
-    return ((len(re.findall(r'(.).\1', name)) > 0) and (len(re.findall(r'(..).*\1', name)) > 0))
+    return (len(re.findall(r'(.).\1', name)) > 0) and (len(re.findall(r'(..).*\1', name)) > 0)
 
 
 if __name__ == '__main__':
