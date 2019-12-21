@@ -124,10 +124,14 @@ class Intcode(object):
             return ''
         return f'{self.parameter(param_num, True, resolved=True)}={self.parameter(param_num)}'
 
-    def receiver(self, input, trace=False):
+    def receiver(self, in_val, trace=False):
         if trace:
-            self.log(f'Incoming input: {input}')
-        self._input.appendleft(input)
+            self.log(f'Incoming input: {in_val}')
+        if isinstance(in_val, str):
+            for c in in_val:
+                self._input.appendleft(ord(c))
+        else:
+            self._input.appendleft(in_val)
 
     @property
     def ip(self):
