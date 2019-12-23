@@ -58,7 +58,9 @@ class Intcode(object):
         self.reset_core()
         self._verbose = False
         self._sender = None
+        self._sender2 = None
         self._receiver = None
+        self._receiver2 = None
         self._nmi = False
 
     def reset_core(self):
@@ -156,9 +158,11 @@ class Intcode(object):
     def all_output(self):
         return [v for v in self._output]
 
-    def connect(self, receiver, sender=None):
-        self._sender = receiver
-        self._receiver = sender
+    def connect(self, receiver1=None, sender1=None, receiver=None, sender=None):
+        self._sender = receiver1
+        self._sender2 = receiver
+        self._receiver = sender1
+        self._receiver2 = sender
 
     def opcode(self, instruction: OpCodes, trace=False):
         ip = self.ip
@@ -199,10 +203,19 @@ class Intcode(object):
         if inst.dis_style == DisStyle.THREE_PARAM:
             self.core[self.parameter(3, target=True)] = inst.op(self.parameter(1), self.parameter(2))
         elif inst.dis_style == DisStyle.IN_PARAM:
-            if self._receiver:
-                if trace:
-                    self.log(f'        Requesting input (@{self.ip:05})')
-                self.core[self.parameter(1, target=True)] = self._receiver()
+            if self._receiver or self._receiver2:
+                if len(self._input) > 0:
+                    inp = self._input.pop()
+                    if trace:
+                        self.log(f'        Got {inp} from queue for input (@{self.ip:05})')
+                    self.core[self.parameter(1, target=True)] = inp
+                else:
+                    if trace:
+                        self.log(f'        Requesting input (@{self.ip:05})')
+                    if self._receiver2:
+                        self.core[self.parameter(1, target=True)] = self._receiver2(self)
+                    else:
+                        self.core[self.parameter(1, target=True)] = self._receiver()
             else:
                 self.core[self.parameter(1, target=True)] = self._wait_for_input(trace=trace)
         elif inst.dis_style == DisStyle.OUT_PARAM:
@@ -210,6 +223,8 @@ class Intcode(object):
                 self.log(f'        Sending out (@{self.ip:05}) → {self.parameter(1)}')
             if self._sender:
                 self._sender(self.parameter(1), trace=trace)
+            elif self._sender2:
+                self._sender2(self, self.parameter(1), trace=trace)
             else:
                 self._output.append(self.parameter(1))
         elif inst.dis_style == DisStyle.COND_JUMP:
