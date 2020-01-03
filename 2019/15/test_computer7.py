@@ -1,8 +1,7 @@
 import pytest
 
-from computer5 import Robot
-from intcode.intcode import Intcode
 from intcode.amplifier import Amplifier
+from intcode.intcode import Intcode
 
 
 @pytest.mark.parametrize('cells, result', [
