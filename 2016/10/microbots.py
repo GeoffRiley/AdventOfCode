@@ -1,6 +1,4 @@
-from collections import namedtuple, defaultdict
-
-Bot = namedtuple('Bot', 'holds, low_dest, high_dest', defaults=(list(), None, None))
+from collections import defaultdict
 
 
 def microbots(instructions: str, val_a: int, val_b: int, part2=True) -> int:
