@@ -75,3 +75,4 @@ if __name__ == '__main__':
         print(f'Day 8, part 1: {memory_maneuver_part_1(license_lines)}')
         print(f'Day 8, part 2: {memory_maneuver_part_2(license_lines)}')
         # Day 8, part 1: 45618
+        # Day 8, part 2: 22306
