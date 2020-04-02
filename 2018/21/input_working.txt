@@ -1,0 +1,55 @@
+#ip 4
+
+ 0: seti 123 -> F           (0b001111011)
+ L00:
+    if F & 0b111001000 == 0b001001000 goto L04 else goto L03
+ 1: bani F & 456 -> F       (0b111001000)
+ 2: eqri F == 72 -> F       (0b001001000) -> 1 else 0
+ 3: addr F + IP -> IP       IP <- 4 or 3
+ L03:
+ 4: seti 0 -> IP            GOTO L00
+ L04:
+ 5: seti 0 -> F
+ L05:
+ 6: bori F | 65536 -> B     (0b000000010000000000000000)
+ 7: seti 4591209 -> F       (0b010001100000111001101001)
+ L07:
+ 8: bani B & 255 -> D       (0xFF)
+ 9: addr F + D -> F
+10: bani F & 16777215 -> F  (0xFFFFFF)
+11: muli F * 65899 -> F     (0b10000000101101011)
+12: bani F & 16777215 -> F  (0xFFFFFF)
+13: gtir 256 > B -> D       256 > B -> 1 else 0
+14: addr D + IP -> IP       IP <- 15 or 14
+L14:
+15: addi IP + 1 -> IP       goto L16
+L15:
+16: seti 27 -> IP           goto L27
+
+L16:
+    D <- B // 256
+17: seti 0 -> D
+L17:
+18: addi D + 1 -> C
+19: muli C * 256 -> C
+20: gtrr C > B -> C
+21: addr C + IP -> IP       IP <- 22 or 21
+L21:
+22: addi IP + 1 -> IP       goto L23
+L22:
+23: seti 25 -> IP           goto L25
+L23:
+24: addi D + 1 -> D
+25: seti 17 -> IP           goto L17
+
+L25:
+26: setr D -> B
+27: seti 7 -> IP            goto L07
+
+L27:
+28: eqrr F == A -> D        F == A -> 1 or 0  ## Terminal condition F == A
+29: addr D + IP -> IP       IP <- 30 or 29
+L29:
+30: seti 5 -> IP            goto L05
+L30:
+    HALT
