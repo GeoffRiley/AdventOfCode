@@ -76,7 +76,7 @@ class Armies(object):
         self.groups: List[UnitGroup] = []
         self.trait: str = trait
 
-    def reset_attacks(self, boost: int = 0) -> Armies:
+    def reset_attacks(self) -> Armies:
         dead_list = []
         for unit in self.groups:
             if unit.unit_count == 0:
@@ -84,7 +84,6 @@ class Armies(object):
                 continue
             unit.under_attack = False
             unit.target = None
-            unit.boost = boost
         for unit in dead_list:
             self.groups.remove(unit)
         return self
@@ -142,6 +141,10 @@ class Armies(object):
     def targeting_order(self) -> List[UnitGroup]:
         return sorted(self.groups, key=lambda x: (x.effective_power, x.initiative), reverse=True)
 
+    def boost(self, boost):
+        for unit in self.groups:
+            unit.boost = boost
+
 
 def parse_line(line: str) -> Union[UnitGroup, None]:
     match = LINE_PARSE.match(line)
@@ -164,7 +167,7 @@ def parse_line(line: str) -> Union[UnitGroup, None]:
                      initiative=initiative, immunities=immunities, weaknesses=weaknesses)
 
 
-def war(immune: Armies, infection: Armies, boost_immune: int = 0):
+def war(immune: Armies, infection: Armies):
     while immune.count > 0 and infection.count > 0:
         made_a_kill = False
         log('Targeting:')
@@ -179,16 +182,11 @@ def war(immune: Armies, infection: Armies, boost_immune: int = 0):
                 made_a_kill = True
         log('')
         if not made_a_kill:
-            print(f'Bail on stuck')
-            return -1
-        immune.reset_attacks(boost_immune).show()
+            log(f'Bail on stuck {immune.unit_count, infection.unit_count}')
+            break
+        immune.reset_attacks().show()
         infection.reset_attacks().show()
-    if boost_immune == 0:
-        return immune.unit_count + infection.unit_count
-    if infection.unit_count != 0:
-        return -infection.unit_count
-    else:
-        return immune.unit_count
+    return immune.unit_count, infection.unit_count
 
 
 def immune_system_simulator_20xx(inp, boost_immune=False):
@@ -206,17 +204,18 @@ def immune_system_simulator_20xx(inp, boost_immune=False):
             continue
         current.add(parse_line(line))
     if boost_immune:
-        boost = 51
+        boost = 1
         while True:
             im_copy = deepcopy(immune)
+            im_copy.boost(boost)
             in_copy = deepcopy(infection)
-            result = war(im_copy, in_copy, boost)
-            if result > 0:
-                return result
-            print(f'Boost {boost} -> {result}')
+            result = war(im_copy, in_copy)
+            log(f'Boost {boost} -> {result}')
+            if result[1] == 0:
+                return result[0]
             boost += 1
     else:
-        return war(immune, infection)
+        return max(war(immune, infection))
 
 
 if __name__ == '__main__':
@@ -229,9 +228,11 @@ Infection:
 801 units each with 4706 hit points (weak to radiation) with an attack that does 116 bludgeoning damage at initiative 1
 4485 units each with 2961 hit points (immune to radiation; weak to fire, cold) with an attack that does 12 slashing damage at initiative 4
 """.splitlines(keepends=False)
-        print(f'Test data: {immune_system_simulator_20xx(rules)}')
+        print(f'Test data: {immune_system_simulator_20xx(rules, True)}')
     else:
         with open('input.txt') as rule_file:
             rules = rule_file.read().splitlines(keepends=False)
             print(f'Day 24, part 1: {immune_system_simulator_20xx(rules)}')
             print(f'Day 24, part 2: {immune_system_simulator_20xx(rules, True)}')
+            # Day 24, part 1: 21199
+            # Day 24, part 2: 5761
