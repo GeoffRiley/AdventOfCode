@@ -102,3 +102,4 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+/2020/05/AOC2020-Day5.png
