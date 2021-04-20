@@ -29,7 +29,7 @@ packaging=19.2=py_0
 pip=19.3.1=py37_0
 pluggy=0.13.1=py37_0
 point2d=0.0.1=pypi_0
-py=1.8.0=py37_0
+py=1.10.0=py37_0
 pyparsing=2.4.5=py_0
 pyrect=0.1.4=pypi_0
 pytest=5.3.0=py37_0
