@@ -1,5 +1,5 @@
 from itertools import chain, combinations
-from typing import Set, List, Iterator, Dict
+from typing import Set, List, Iterator, Dict, Tuple
 
 # Three types of mapping to provide masks of different purposes
 # - SET = bits in result to set on; use (mask .or. value)
@@ -12,7 +12,7 @@ MAPPING_FLOAT = str.maketrans('X10', '100')
 
 
 def docking_data_part1(data: str) -> int:
-    boot_code: List[Iterator[List[str, str]]] = parse_data(data)
+    boot_code: List[Iterator[Tuple[str, str]]] = parse_data(data)
     mem: Dict[int, int] = dict()
     set_mask: int = 0
     reset_mask: int = 0
@@ -28,13 +28,13 @@ def docking_data_part1(data: str) -> int:
     return sum(mem.values())
 
 
-def parse_data(data: str) -> List[Iterator[List[str, str]]]:
+def parse_data(data: str) -> List[Iterator[Tuple[str, str]]]:
     return [map(lambda x: x.strip(), line.split(' = '))
             for line in data.strip().splitlines(keepends=False)]
 
 
 def docking_data_part2(data: str) -> int:
-    boot_code: List[Iterator[List[str, str]]] = parse_data(data)
+    boot_code: List[Iterator[Tuple[str, str]]] = parse_data(data)
     mem: Dict[int, int] = dict()
     set_mask: int = 0
     float_places: Set[int] = set()
