@@ -26,7 +26,7 @@ numpy=1.17.4=py37hc1035e2_0
 numpy-base=1.17.4=py37hde5b4d6_0
 openssl=1.1.1f=h7b6447c_0
 packaging=19.2=py_0
-pip=19.3.1=py37_0
+pip=21.1=py37_0
 pluggy=0.13.1=py37_0
 point2d=0.0.1=pypi_0
 py=1.10.0=py37_0
