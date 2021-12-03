@@ -32,7 +32,7 @@ class Comparable(Protocol):
         return not self < other
 
 
-def binary_contains(sequence: Sequence[_C], key: _C) -> bool:
+def binary_contains(sequence: Sequence[Comparable], key: Comparable) -> bool:
     low: int = 0
     high: int = len(sequence) - 1
     while low <= high:

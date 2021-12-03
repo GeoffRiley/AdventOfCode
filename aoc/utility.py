@@ -7,40 +7,40 @@ def to_list(line: str):
     return [element.strip() for element in line.split(',')]
 
 
-def extract_ints(line: str) -> List[int]:
+def extract_ints(line: str, negative: bool = False) -> List[int]:
     """ Trawl the input line for any integers and return them as a list.
 
-    This will extract ints, including negative that are not necessarily comma separated.
+    This will extract ints, including negatives if requested that are not
+    necessarily comma separated.
     """
-    return [int(x) for x in re.findall(r"-?\d+", line)]
+    regex = r'(-?\d+)' if negative else r'(\d+)'
+    return list(map(int, re.findall(regex, line)))
 
 
-def to_list_int(line: str):
+def to_list_int(line: str) -> List[int]:
     """ Transform a string of comma-separated integers to a list. """
-    return [int(element) for element in line.split(',')]
+    return list(map(int, line.split(',')))
 
 
-def lines_to_list(lines: str):
+def lines_to_list(lines: str) -> List[str]:
     """ Transform multi-line input to a list. """
     return lines.splitlines(keepends=False)
 
 
-def lines_to_list_int(lines: str):
+def lines_to_list_int(lines: str) -> List[int]:
     """ Transform multi-line integer input to a list. """
-    return [int(x) for x in lines.splitlines(keepends=False)]
+    return list(map(int, lines.splitlines(keepends=False)))
 
 
-def sequence_to_int(line: str):
+def sequence_to_int(line: str) -> List[int]:
     """ Transform a sequence of digits to a list of integers. """
-    return [int(digit) for digit in line]
+    return list(map(int, line))
 
 
 def grouped(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any, ...]]:
     """ Create groups of tuples comprising 'n' values from the given iter.
 
     s -> (s0, s1, s2, ..., s(n-1)),
-        (s1, s2, s3, ..., s((n-1)+1)),
-        ...
         (sn, s(n+1), s(n+2), ..., s(2n-1))...
     """
     return zip(*[iter(iterable)] * n)
