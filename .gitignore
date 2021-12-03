@@ -5,6 +5,12 @@ __pycache__/
 
 # PyCharm / JetBrains files
 .idea/shelf
+.idea/workspace.xml
+.idea/usage.statisics.xml
+.idea/modules.xml
+.idea/gradle.xml
+.idea/libraries/**/*.xml
+*.iml
 
 # C extensions
 *.so
