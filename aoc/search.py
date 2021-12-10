@@ -60,6 +60,9 @@ class Stack(Generic[_T]):
     def pop(self) -> _T:
         return self._container.pop()
 
+    def clear(self) -> None:
+        self._container.clear()
+
     def __repr__(self) -> str:
         return repr(self._container)
 
@@ -99,6 +102,9 @@ class Queue(Generic[_T]):
 
     def pop(self) -> _T:
         return self._container.popleft()
+
+    def clear(self) -> None:
+        self._container.clear()
 
     def __repr__(self) -> str:
         return repr(self._container)
