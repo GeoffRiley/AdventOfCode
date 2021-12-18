@@ -24,4 +24,4 @@ def manhattan_distance(a: Tuple[int, int], b: Tuple[int, int]) -> int:
 
 def sign(x) -> int:
     """Return the sign of the argument.  [-1, 0, 1]"""
-    return x and (1, -1)[x < 0]
+    return bool(x > 0) - bool(x < 0)
