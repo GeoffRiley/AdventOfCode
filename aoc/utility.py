@@ -1,4 +1,5 @@
 import re
+from itertools import tee
 from typing import List, Tuple, Any, Iterable
 
 
@@ -49,7 +50,8 @@ def grouped(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any, ...]]:
 def pairwise(iterable: Iterable[Any]) -> Iterable[Tuple[Any, Any]]:
     """ Divide the given iter into pairs and return as tuple pairs.
 
-    s -> (s0, s1), (s2, s3), (s4, s5), ...
+    s -> (s0,s1), (s1,s2), (s2, s3), ...
     """
-    itr = iter(iterable)
-    return zip(itr, itr)
+    a, b = tee(iterable)
+    next(b, None)
+    return zip(a, b)
