@@ -1,5 +1,5 @@
 import re
-from itertools import tee
+from itertools import tee, islice
 from typing import List, Tuple, Any, Iterable
 
 
@@ -55,3 +55,15 @@ def pairwise(iterable: Iterable[Any]) -> Iterable[Tuple[Any, Any]]:
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+
+def batched(iterable, n):
+    """ Batch data into lists of length n. The last batch may be shorter.
+
+    batched('ABCDEFG', 3) -> 'ABC', 'DEF', 'G'
+    """
+    if n < 1:
+        raise ValueError('Batch size must be greater than 1.')
+    it = iter(iterable)
+    while batch := list(islice(it, n)):
+        yield batch
