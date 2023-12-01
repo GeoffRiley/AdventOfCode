@@ -39,7 +39,7 @@
       <excludeFolder url="file://$MODULE_DIR$/2019/22/.pytest_cache" />
       <excludeFolder url="file://$MODULE_DIR$/2019/.pytest_cache" />
     </content>
-    <orderEntry type="jdk" jdkName="AOC_3_10" jdkType="Python SDK" />
+    <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="TestRunnerService">

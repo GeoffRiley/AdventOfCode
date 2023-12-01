@@ -33,7 +33,11 @@ class LoaderLib:
 
         self.aoc_year = aoc_year
 
-        user_profile = Path(os.environ['USERPROFILE'])
+        try:
+            user_profile = Path(os.environ['USERPROFILE'])
+        except KeyError:
+            user_profile = Path(os.environ['HOME'])
+
         self._aoc_path = user_profile / 'aoc'
 
         base_path = Path().cwd()
@@ -48,7 +52,7 @@ class LoaderLib:
         if not aoc_cookie_filename.exists():
             raise EnvironmentError(f"No cookie file found ({aoc_cookie_filename})")
         aoc_cookie_value = aoc_cookie_filename.read_text()
-        self._aoc_cookie = dict(session=aoc_cookie_value)
+        self._aoc_cookie = dict(session=aoc_cookie_value.strip('\n'))
 
     def get_aoc_input(self, day, transform_function=lambda x: x):
         """Get puzzle input from the AOC website.

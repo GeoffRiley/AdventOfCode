@@ -2,7 +2,9 @@
 
 My solutions to Eric Wastl's [Advent of Code](https://adventofcode.com/2023/)
 
-* Day 01: [D1](./01)
+At the request of Eric, no `input.txt` files are being included in the archive this year. I missed the request last year, so I'm  being careful to follow the instructions this time.
+
+* Day 01: [Trebuchet?!](./01)
 * Day 02: [D2](./02)
 * Day 03: [D3](./03)
 * Day 04: [D4](./04)
