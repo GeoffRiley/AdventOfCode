@@ -6,7 +6,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 
 * Day 01: [Trebuchet?!](./01)
 * Day 02: [Cube Conundrum](./02)
-* Day 03: [D3](./03)
+* Day 03: [Gear Ratios](./03)
 * Day 04: [D4](./04)
 * Day 05: [D5](./05)
 * Day 06: [D6](./06)
