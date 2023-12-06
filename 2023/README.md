@@ -8,7 +8,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 * Day 02: [Cube Conundrum](./02)
 * Day 03: [Gear Ratios](./03)
 * Day 04: [Scratchcards](./04)
-* Day 05: [D5](./05)
+* Day 05: [If You Give A Seed A Fertilizer](./05)
 * Day 06: [D6](./06)
 * Day 07: [D7](./07)
 * Day 08: [D8](./08)
