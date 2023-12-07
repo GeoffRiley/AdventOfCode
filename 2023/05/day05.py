@@ -34,13 +34,43 @@ class RangeMapper:
     @staticmethod
     def _show_range(rng: Tuple[int, int, int]) -> str:
         dest, src, length = rng
-        return f"({src}, {src+length-1}) → ({dest}, {dest+length-1})"
+        return f"({src} → {src+length-1}) ⇒ ({dest} → {dest+length-1})"
 
     def dump(self) -> None:
-        print(f"{self.title} dump:")
+        print(f"/-- {self.title} dump:")
         for rng in self.range_list:
-            print(f"    ({self._show_range(rng)})")
-        print()
+            print(f"|    ({self._show_range(rng)})")
+        print("\\--")
+
+    def split_range(
+        self, rng: Tuple[int, int], rng_border: int
+    ) -> List[Tuple[int, int]]:
+        """
+        Split a range into two ranges.
+        `rng` is a tuple of (start, length) values.
+        `rng_border` is the value that the range is split at.
+        The return value is a list of tuples of (start, length) values
+        representing the two ranges.
+        """
+        print(f"    // split_range({rng}, {rng_border})")  # DEBUG
+        seek, cnt = rng
+        if (seek == rng_border) or (seek + cnt <= rng_border):  # No split
+            return [(seek, cnt)]
+        return [
+            (seek, rng_border - seek + 1),
+            (rng_border + 1, cnt - (rng_border - seek)),
+        ]  # Split
+
+    @staticmethod
+    def _apply_offset(rngs, offset):
+        """
+        Apply an offset to a list of ranges.
+        `rngs` is a list of tuples of (start, length) values.
+        `offset` is the offset to be applied.
+        The return value is a new list of tuples of (start, length) values
+        with the offset applied.
+        """
+        return [(start + offset, length) for start, length in rngs]
 
     def xlate(self, rng: Tuple[int, int]) -> List[Tuple[int, int]]:
         """
@@ -51,26 +81,30 @@ class RangeMapper:
         The return value is a list of tuples of (start, length) values
         representing the target ranges.
         """
-        print(f"    xlate({rng})")  # DEBUG
-        print(f"    ** Range covered: ({rng[0]}, {rng[0]+rng[1]-1})")  # DEBUG
+        print(f"-- xlate({rng}); {self.title=}")  # DEBUG
+        print(f"  >> Range covered: ({rng[0]} → {rng[0]+rng[1]-1})")  # DEBUG
         seek, cnt = rng
         new_rngs = []
         for dest, src, length in self.range_list:
-            print(f"    ** Mapping: {self._show_range((dest, src, length))}")  # DEBUG
-            offset = seek - src
+            print(f"  && Mapping: {self._show_range((dest, src, length))}")  # DEBUG
+            offset = dest - src
             if seek in range(src, src + length):
-                if cnt + offset > length:
-                    # The seek range extends beyond the source range.
-                    # We need to split the seek range into multiple ranges.
-                    new_rngs.append((dest - src + seek, length))
-                    seek, cnt = (seek + length, cnt - length + offset)
-                    print(f"    ** New seek range: ({seek}, {cnt})")  # DEBUG
-                else:
-                    # The seek range is shorter than the source range.
-                    # We need to split the source range into two ranges.
-                    new_rngs.append((dest - src + seek, cnt))
+                chop = self.split_range((seek, cnt), src + length - 1)
+                print(f"    \\\\ Split range: {chop}")
+                if len(chop) == 1:
+                    # The seek range is entirely within the source range.
+                    dest_rng = self._apply_offset(chop, offset)
+                    print(f"    ** New dest range: {dest_rng}")
+                    new_rngs.extend(dest_rng)
                     seek, cnt = (seek + cnt, 0)
-                    print(f"    ** New seek range: ({seek}, {cnt})")  # DEBUG
+                    print(f"    [] End of seek range: ({seek}, {cnt})")
+                else:
+                    # The seek range is split into two ranges.
+                    dest_rng = self._apply_offset(chop[:-1], offset)
+                    print(f"    ** New dest range: {dest_rng}")
+                    new_rngs.extend(dest_rng)
+                    seek, cnt = chop[-1]
+                    print(f"    <> New seek range: ({seek}, {cnt})")
             if cnt == 0:
                 break
         if cnt > 0:
@@ -78,7 +112,7 @@ class RangeMapper:
             # We assume a 1:1 mapping for the remainder of the seek range.
             print(f"    ** No mapping for ({seek}, {cnt})")  # DEBUG
             new_rngs.append((seek, cnt))  # Assume 1:1 mapping
-        print(f"    ** New ranges: {new_rngs}")  # DEBUG
+        print(f"    \\\\ New ranges: {new_rngs}")  # DEBUG
         return new_rngs
 
 
@@ -183,11 +217,15 @@ def part2(seed_list, mappings):
             # We don't need to add the location of every seed in the range,
             # because we know that the seeds are in order, and we know that
             # the location of the lowest seed is the location of the range.
+            print(
+                f"** Reached end of mappings; {seed=}, {seed_count=}, {index=}"
+            )  # DEBUG
             final_seed_locations.append(seed)
             continue
         if seed_count == 1:
             # We have a single seed, so we can calculate the location, and
             # remove it from the list of candidates.
+            print(f"** Single seed; {seed=}, {seed_count=}, {index=}")  # DEBUG
             seed_location = calculate_seed_location(seed, mappings, index)
             final_seed_locations.append(seed_location)
             continue
@@ -196,6 +234,7 @@ def part2(seed_list, mappings):
         # Add the new ranges to the list of seed ranges.
         seed_ranges.extend([(sd, ct, index + 1) for sd, ct in new_ranges])
 
+    print(f"** {final_seed_locations=}")  # DEBUG
     return min(final_seed_locations)
 
 
@@ -273,3 +312,4 @@ if __name__ == "__main__":
     # --
     # 157361872 too high
     # 33366705 too low
+    # 105230362 too high
