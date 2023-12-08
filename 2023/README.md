@@ -10,7 +10,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 * Day 04: [Scratchcards](./04)
 * Day 05: [If You Give A Seed A Fertilizer](./05)
 * Day 06: [Wait For It](./06)
-* Day 07: [D7](./07)
+* Day 07: [Camel Cards](./07)
 * Day 08: [D8](./08)
 * Day 09: [D9](./09)
 * Day 10: [D10](./10)
