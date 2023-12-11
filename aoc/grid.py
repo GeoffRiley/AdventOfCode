@@ -4,14 +4,14 @@ class Grid:
         self.default = default
         self._ranges = {}
 
-    def copy(self):
+    def copy(self) -> "Grid":
         ret = Grid()
         ret.grid = self.grid.copy()
         ret.default = self.default
         return ret
 
     @staticmethod
-    def from_text(values):
+    def from_text(values) -> "Grid":
         grid = Grid()
         if isinstance(values, str):
             if "\n" in values:
@@ -60,12 +60,18 @@ class Grid:
 
     def axis_min(self, axis):
         if self._ranges.get(axis, None) is None:
-            self._ranges[axis] = (min([x[axis] for x in self.grid]), max([x[axis] for x in self.grid]))
+            self._ranges[axis] = (
+                min([x[axis] for x in self.grid]),
+                max([x[axis] for x in self.grid]),
+            )
         return self._ranges[axis][0]
 
     def axis_max(self, axis):
         if self._ranges.get(axis, None) is None:
-            self._ranges[axis] = (min([x[axis] for x in self.grid]), max([x[axis] for x in self.grid]))
+            self._ranges[axis] = (
+                min([x[axis] for x in self.grid]),
+                max([x[axis] for x in self.grid]),
+            )
         return self._ranges[axis][1]
 
     def axis_size(self, axis):
@@ -88,7 +94,16 @@ class Grid:
         else:
             x, y = args
         if diagonals:
-            offsets = ((-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1))
+            offsets = (
+                (-1, -1),
+                (-1, 0),
+                (-1, 1),
+                (0, -1),
+                (0, 1),
+                (1, -1),
+                (1, 0),
+                (1, 1),
+            )
         else:
             offsets = ((0, -1), (1, 0), (0, 1), (-1, 0))
         for ox, oy in offsets:
@@ -99,7 +114,8 @@ class Grid:
 
     def next_location(self, location, wrap=False):
         """
-        Returns the next location in the grid, or None if there is no next location.
+        Returns the next location in the grid, or None if there is no next
+        location.
         If wrap is True, the grid wraps around.
         """
         if isinstance(location, tuple):
