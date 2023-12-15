@@ -16,7 +16,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 * Day 10: [Pipe Maze](./10)
 * Day 11: [Cosmic Expansion](./11)
 * Day 12: [Hot Springs](./12)
-* Day 13: [D13](./13)
+* Day 13: [Point of Incidence](./13)
 * Day 14: [D14](./14)
 * Day 15: [D15](./15)
 * Day 16: [D16](./16)
