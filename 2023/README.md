@@ -18,7 +18,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 * Day 12: [Hot Springs](./12)
 * Day 13: [Point of Incidence](./13)
 * Day 14: [Parabolic Reflector Dish](./14)
-* Day 15: [D15](./15)
+* Day 15: [Lens Library](./15)
 * Day 16: [D16](./16)
 * Day 17: [D17](./17)
 * Day 18: [D18](./18)
