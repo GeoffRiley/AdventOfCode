@@ -20,7 +20,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 * Day 14: [Parabolic Reflector Dish](./14)
 * Day 15: [Lens Library](./15)
 * Day 16: [The Floor Will Be Lava](./16)
-* Day 17: [D17](./17)
+* Day 17: [Clumsy Crucible](./17)
 * Day 18: [D18](./18)
 * Day 19: [D19](./19)
 * Day 20: [D20](./20)
