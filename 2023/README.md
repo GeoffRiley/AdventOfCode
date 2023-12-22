@@ -24,7 +24,7 @@ At the request of Eric, no `input.txt` files are being included in the archive t
 * Day 18: [Lavaduct Lagoon](./18)
 * Day 19: [D19](./19)
 * Day 20: [D20](./20)
-* Day 21: [D21](./21)
+* Day 21: [Step Counter](./21)
 * Day 22: [D22](./22)
 * Day 23: [D23](./23)
 * Day 24: [D24](./24)
