@@ -76,7 +76,9 @@ class LoaderLib:
                 self._aoc_input_url.format(year=self.aoc_year, day=day),
                 cookies=self._aoc_cookie)
 
+            # Adding debugging statements
             if response.status_code != 200:
+                print(f"Failed to fetch AoC input: {response.status_code} - {response.text}")
                 raise AssertionError('Unable to obtain puzzle input!')
 
             puzzle_input = response.text.rstrip('\n')
@@ -112,9 +114,11 @@ class LoaderLib:
     def retrieve_data(self, day, key):
         """Retrieve some data from a cache file"""
         cache_filename = self._aoc_path / f'cache_{self.aoc_year}_{day:02d}_{key}.txt'
-        obj = pickle.loads(cache_filename.read_bytes()) if cache_filename.exists() else None
-
-        return obj
+        return (
+            pickle.loads(cache_filename.read_bytes())
+            if cache_filename.exists()
+            else None
+        )
 
 
 if __name__ == '__main__':
