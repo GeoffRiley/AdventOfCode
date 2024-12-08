@@ -1,6 +1,6 @@
 """
 Advent of code 2023
-Day 22: 
+Day 22: Sand Slabs
 """
 
 import itertools
