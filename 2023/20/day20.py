@@ -93,10 +93,7 @@ class ConjunctionModule(Module):
             if input_module not in self.memory:
                 self.memory[input_module] = LOW
         # Determine pulse to send
-        if all(p == HIGH for p in self.memory.values()):
-            new_pulse_type = LOW
-        else:
-            new_pulse_type = HIGH
+        new_pulse_type = LOW if all(p == HIGH for p in self.memory.values()) else HIGH
         pulse_counts[new_pulse_type] += len(self.outputs)
         for dest_module in self.outputs:
             pulse_queue.append((new_pulse_type, dest_module, self.name))
@@ -198,9 +195,7 @@ def simulate_pulses(modules, num_presses=1):
 
 
 # BFS to find minimal button presses to send a low pulse to 'rx'
-def bfs_min_presses_to_rx(modules):
-    from collections import deque
-
+def bfs_min_presses_to_rx(modules, flag_module="rx"):
     # Initial state: all modules in default state
     initial_modules_state = {}
     for name, module in modules.items():
@@ -249,7 +244,7 @@ def bfs_min_presses_to_rx(modules):
             dest_module = new_modules_state[dest_module_name]
 
             # If dest_module is 'rx', check if it receives a low pulse
-            if dest_module_name == "rx":
+            if dest_module_name == flag_module:
                 if pulse_type == LOW:
                     rx_received_low_pulse = True
                     break  # We can stop processing further pulses
@@ -291,30 +286,41 @@ def compute_lcm(numbers):
     return reduce(lcm, numbers)
 
 
-def get_flip_flop_period(module_name, modules):
-    # Placeholder: Compute the actual period of the flip-flop module
-    # For now, return 2
-    return 2
+def find_conjunctions_affecting_rx(modules):
+    # modules: dict[module_name: module_object]
+    # each module_object has: .inputs (list of sources), .type (maybe 'flipflop', 'conjunction', 'broadcaster', 'untyped')
 
+    # target is "rx" but that is fed directly from "ls", so
+    # track that instead
+    target = modules["rx"].inputs[0]
+    if target not in modules:
+        return []
 
-def get_critical_flip_flops(modules):
-    critical_flip_flops = set()
+    mod = modules[target]
+    stack = list(mod.inputs)
     visited = set()
-    stack = ["rx"]
+    conjunctions_impacting_rx = []
 
     while stack:
-        current = stack.pop()
+        current = stack.pop(0)
         if current in visited:
             continue
         visited.add(current)
-        module = modules.get(current)
-        if module is None:
-            continue
-        if isinstance(module, FlipFlopModule):
-            critical_flip_flops.add(current)
+
+        mod = modules[current]
+        # Determine if it's a conjunction module
+        # Depending on how you stored it, you might have:
+        # if isinstance(mod, ConjunctionModule):
+        # or if you stored type info in mod.type
+        if hasattr(mod, "memory"):  # or another property unique to conjunction modules
+            conjunctions_impacting_rx.append(current)
         else:
-            stack.extend(module.inputs)
-    return critical_flip_flops
+            # Add all input modules to the stack
+            for inp in mod.inputs:
+                if inp not in visited:
+                    stack.append(inp)
+
+    return conjunctions_impacting_rx
 
 
 def part1(modules: list[Module]) -> int:
@@ -337,19 +343,21 @@ def part2(modules: list[Module]) -> int:
 
     If we can work out the period of each of the four conjunctions,
     then perhaps that will give values that can be used to find a
-    least common multiple: "the answer"? 
+    least common multiple: "the answer"?
     """
     # Reset all module states
     for module in modules.values():
         module.reset()
 
-    # Get critical flip-flop modules
-    critical_flip_flops = get_critical_flip_flops(modules)
+    target_conjuntions = find_conjunctions_affecting_rx(modules)
 
     # Keep pressing the button until rx receives a low pulse
-    button_presses = bfs_min_presses_to_rx(modules)
+    presses_rec = []
+    for mod_name in target_conjuntions:
+        button_presses = bfs_min_presses_to_rx(modules, mod_name)
+        presses_rec.append(button_presses)
 
-    return button_presses
+    return compute_lcm(presses_rec)
 
 
 def main():
@@ -410,4 +418,20 @@ def main():
 if __name__ == "__main__":
     main()
     # --
-    # -
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.000767        |        0.000767 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part setup : len(modules)=59 ...
+    # --------------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.016994        |        0.017761 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part 1   : 869395600
+    # --------------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.990013        |        1.007774 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part 2   : 232605773145467
+    # --------------------------------------------------------------------------------
