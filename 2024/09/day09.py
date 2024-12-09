@@ -3,11 +3,9 @@ Advent of code 2024
 Day 09: Disk Fragmenter
 """
 
-from collections import Counter, OrderedDict
 from textwrap import dedent
 
 from aoc.loader import LoaderLib
-from aoc.utility import extract_ints, lines_to_list, to_list_int
 
 
 def part1(input_text: str) -> int:
@@ -46,20 +44,23 @@ def part1(input_text: str) -> int:
 
 def part2(input_text: list[str]) -> int:
     """ """
-    file_space = {}
-    file_dir = {}
-    free_space = {}
+    file_space: dict[int, tuple[int, int]] = {}
+    file_dir: dict[int, tuple[int, int]] = {}
+    free_space: dict[int, int] = {}
     is_file = True
     file_id = 0
     current_pos = 0
     for ch in input_text:
         l = int(ch)
         if is_file:
-            file_space[current_pos] = (l, file_id)
-            file_dir[file_id] = current_pos
+            if l <= 0:
+                raise ValueError("File size must be positive")
+            file_space[current_pos] = (file_id, l)
+            file_dir[file_id] = (current_pos, l)
             file_id += 1
         else:
-            free_space[current_pos] = l
+            if l > 0:
+                free_space[current_pos] = l
         is_file = not is_file
         current_pos += l
 
@@ -69,6 +70,22 @@ def part2(input_text: list[str]) -> int:
     # - If found, move the whole file into that space in one operation.
     # - After processing all files, compute the checksum using the update
     #   positions.
+
+    for fid in sorted(file_space.keys(), reverse=True):
+        fpos, fsize = file_space[fid]
+        for fpos_check in sorted(free_space.keys()):
+            # Check if the free space is above the file
+            if fpos_check > fpos:
+                break
+            # Check if the freespace is large enough for the file
+            if free_space[fpos_check] >= fsize:
+                # Reduce freespace size, increase pointer position
+                # Move file to where the freespace was
+                # Update freespace pointers
+                free_space[fpos_check] += fsize
+                free_space.pop(fpos)
+                file_dir[fid] = fpos_check
+                break
 
     raise NotImplementedError
 
