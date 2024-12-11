@@ -19,11 +19,11 @@ class Size:
     cx: int = 0
     cy: int = 0
 
-    def __add__(self, other: 'Size') -> 'Size':
+    def __add__(self, other: "Size") -> "Size":
         """Return the sum of two sizes."""
         return Size(self.cx + other.cx, self.cy + other.cy)
 
-    def __sub__(self, other: 'Size') -> 'Size':
+    def __sub__(self, other: "Size") -> "Size":
         """Return the difference of two sizes."""
         return Size(self.cx - other.cx, self.cy - other.cy)
 
@@ -248,10 +248,7 @@ class Rectangle:
 
     def pt_in_rect(self, point: Point) -> bool:
         """Returns True if the given point is inside the rectangle."""
-        return (
-                self.left <= point.x <= self.right
-                and self.top <= point.y <= self.bottom
-        )
+        return self.left <= point.x <= self.right and self.top <= point.y <= self.bottom
 
     def set_empty(self) -> None:
         """Make a null rectangle by setting all coordinates to zero."""
