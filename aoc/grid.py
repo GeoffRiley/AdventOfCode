@@ -133,3 +133,19 @@ class Grid:
         else:
             return None
         return x, y
+
+    def is_valid(self, *coords):
+        """
+        Checks if the given coordinates are valid within the grid.
+
+        Determines whether the provided coordinates exist in the current grid. 
+        Returns a boolean indicating the presence of the coordinates.
+
+        Args:
+            *coords: Variable number of coordinate arguments to check.
+
+        Returns:
+            bool: True if coordinates are in the grid, False otherwise.
+        """
+        return coords in self.grid
+    
