@@ -49,7 +49,8 @@ class BinaryFeeder:
         """
         if self._current_bit >= 4:
             self._position += 1
-            self._current_byte = f"{int(self.hex_string[self._position], 16):04b}"
+            if self._position < len(self.hex_string):
+                self._current_byte = f"{int(self.hex_string[self._position], 16):04b}"
             self._current_bit = 0
         ret_val = self._current_byte[self._current_bit]
         self._current_bit += 1
@@ -80,13 +81,15 @@ class BinaryFeeder:
         Returns:
             int: The complete literal value extracted from the binary stream.
         """
-        ret_val = 0
         while True:
-            c_flag = self._next_bit()
+        while True:
+            c_flag = self.get_bits(1)
             part = self.get_bits(4)
-            ret_val = (ret_val << 4) + part
-            if not c_flag:
-                return ret_val
+            ret_val = (ret_val << 4) | part
+            if c_flag == 0:
+                break
+                break
+        return ret_val
 
     @property
     def bit_index(self) -> int:
