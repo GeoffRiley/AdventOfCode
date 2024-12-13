@@ -45,95 +45,79 @@ def part1(grid: Grid) -> int:
 
     return total_price
 
+PERIMETER = object()
 
 def part2(grid: Grid) -> int:
+    """
+    This is a depth first search solution, but it's not working.
+
+    The idea is to find the area of a plant type and then calculate the perimeter
+    area and sides by counting the number of sides that are not the same plant type.
+
+    The area is the number of nodes visited, the perimeter is the number of nodes
+    that are not the same plant type and the sides is the number of sides that are
+    not the same plant type.
+
+    The total price is the area times the sides and the total perimeter price is
+    the area times the perimeter.
+
+    The problem is that the total prices are not coming out as expected.
+
+    I'm going to leave this here for now and come back to it later.
+    """
     rows = grid.height()
     cols = grid.width()
+    # Going back to one of my favourite indexing methods, complex numbers. :)
+    # Create a graph using complex numbers to represent one dimension of the
+    # grid as the real part and the other as the imaginary part.
+    # This makes it easy to move in all directions as the whole grid is
+    # represented as a single one dimensional array.
+    graph = {i + j * 1j: grid[i, j] for i in range(rows) for j in range(cols)}
 
-    def bfs(x, y, plant_type):
-        area = 0
-        boundary_edges = set()
-        visited_region = set()
-        queue = deque([(x, y)])
-        visited_region.add((x, y))
+    # Add a surround of "#" to the grid to stop bleed?
+    for i in range(-1, rows + 1):
+        graph[i - 1 * 1j] = graph[i + cols * 1j] = PERIMETER  # Top and bottom
+    for j in range(-1, cols + 1):
+        graph[-1 + j * 1j] = graph[rows + j * 1j] = PERIMETER  # Left and right
 
-        while queue:
-            cx, cy = queue.popleft()
-            area += 1
-
-            for nx, ny in grid.neighbors(cx, cy, diagonals=False, valid_only=False):
-                edge = ((cx, cy), (nx, ny))
-                if grid.is_valid(nx, ny) and grid[nx, ny] == plant_type:
-                    if (nx, ny) not in visited_region:
-                        queue.append((nx, ny))
-                        visited_region.add((nx, ny))
-                else:
-                    boundary_edges.add(edge)
-
-        return area, visited_region, boundary_edges
-
-    def combine_edges(edges):
-        """
-        Combine edges that are adjacent to each other.
-        """
-        unique_edges = defaultdict(set)
-        result = set()
-        for edge in edges:
-            a, b1, b2 = edge
-            for i in range(b1, b2+1):
-                unique_edges[a].add(i)
-        # Combine adjacent edges
-        for edge in unique_edges:
-            b1, b2 = min(unique_edges[edge]), max(unique_edges[edge])
-            # check for breaks in the boundary and add them to the result
-            for i in range(b1, b2+1):
-                if i not in unique_edges[edge]:
-                    result.add((edge, b1, i-1))
-                    b1 = i
-            result.add((edge, b1, b2))
-        return result
-
-    def optimize_edges(boundary_edges):
-        """
-        Reduce boundary edges by identifying unique external edges.
-        """
-        horizontal_edges = set()
-        vertical_edges = set()
-
-        for edge in boundary_edges:
-            (x1, y1), (x2, y2) = edge
-
-            if (x2, y2) < (x1, y1):
-                edge = ((x2, y2), (x1, y1))  # Normalize edge
-                (x1, y1), (x2, y2) = edge
-            if x1 == x2:
-                vertical_edges.add((x1, y1, y2))  # Vertical edge
-                vertical_edges = combine_edges(vertical_edges)
-            else:
-                horizontal_edges.add((y1, x1, x2))  # Horizontal edge
-                horizontal_edges = combine_edges(horizontal_edges)
-
-        unique_edges = vertical_edges.union(horizontal_edges)
-
-        # Total sides are the count of unique external edges
-        return len(unique_edges)
-
+    # Create a set of visited nodes
     visited = set()
+
+    def dfs(visited, node, plant_type, dir):
+        """
+        Depth first search to find the region of a plant type.
+        """
+        if node in visited:
+            return 0, 0, 0
+        visited.add(node)
+        if graph[node] != plant_type:
+            if (
+                graph[node + dir * 1j] != plant_type
+                or graph[node - dir + dir * 1j] != plant_type
+            ):
+                return 0, 1, 1
+            return 0, 1, 0
+        area, perimeter, sides = 1, 0, 0
+        for d in [1, 1j, -1, -1j]:
+            a, p, s = dfs(visited, node + d, plant_type, d)
+            area += a
+            perimeter += p
+            sides += s
+        return area, perimeter, sides
+
     total_price = 0
+    total_perimeter_price = 0
 
-    for i in range(rows):
-        for j in range(cols):
-            if (i, j) not in visited:
-                plant_type = grid[i, j]
-                area, region_visited, boundary_edges = bfs(i, j, plant_type)
-                visited.update(region_visited)
-                sides = optimize_edges(boundary_edges)
-                print(
-                    f"Region with plant type '{plant_type}' - Area: {area}, Sides: {sides}"
-                )
-                total_price += area * sides
-
-    return total_price
+    for node in graph:
+        if node not in visited and graph[node] != PERIMETER:
+            area, perimeter, sides = dfs(visited, node, graph[node], 1)
+            print(f"Plant type = {graph[node]} {area=} {perimeter=} {sides=}")
+        total_price += area * sides
+        total_perimeter_price += area * perimeter
+        
+    # This really should be the result for both part 1 and 2 here,
+    # but there's something going adrift in the calculation.
+    return total_perimeter_price, total_price
 
 
 def main():
@@ -160,7 +144,7 @@ def main():
     #     (extract_ints(param)) for param in [line for line in lines_to_list(input_text)]
     # ]
     # lines = [lines_to_list(line) for line in input_text.split("\n\n")]
-    lines = lines_to_list(input_text)
+    # lines = lines_to_list(input_text)
     grid = Grid().from_text(input_text)
 
     loader.print_solution("setup", f"{grid.width()=} {grid.height()=} ...")
