@@ -58,7 +58,7 @@ class Grid:
             values = values.split("\n") if "\n" in values else [values]
         for y, row in enumerate(values):
             for x, cur in enumerate(row):
-                grid.set(cur, x, y)
+                grid.set(cur, (x, y))
         return grid
 
     def __getitem__(self, key) -> Any:
@@ -140,7 +140,7 @@ class Grid:
         """
         return key in self.grid if isinstance(key, tuple) else (key,) in self.grid
 
-    def get(self, *coords) -> Any:
+    def get(self, coords) -> Any:
         """
         Retrieves the value at specified grid coordinates with a fallback to
         the default value. The method provides a flexible way to access grid
@@ -154,7 +154,10 @@ class Grid:
             The value at the specified coordinates, or the default value if
             the coordinates are not set.
         """
-        return self.grid.get(*coords, self.default)
+        if isinstance(coords, tuple):
+            return self.grid.get(coords, self.default)
+        else:
+            return self.grid.get((coords,), self.default)
 
     def set(self, value, coords) -> None:
         """
@@ -170,7 +173,10 @@ class Grid:
             None
         """
         self._ranges = {}
-        self.grid[coords] = value
+        if isinstance(coords, tuple):
+            self.grid[coords] = value
+        else:
+            self.grid[(coords,)] = value
 
     def axis_min(self, axis) -> Any:
         """
