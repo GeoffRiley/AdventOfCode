@@ -1,4 +1,5 @@
 from functools import reduce
+from math import copysign
 from operator import mul
 from typing import Tuple
 
@@ -7,7 +8,10 @@ def factorial(n: int) -> int:
     """Calculate the Factorial of N."""
     if n < 1:
         return 1
-    return reduce(mul, range(1, n + 1))
+    result = 1
+    for i in range(1, n + 1):
+        result *= i
+    return result
 
 
 def fibonacci(n: int, f0: int = 0, f1: int = 1) -> int:
@@ -24,4 +28,4 @@ def manhattan_distance(a: Tuple[int, int], b: Tuple[int, int]) -> int:
 
 def sign(x) -> int:
     """Return the sign of the argument.  [-1, 0, 1]"""
-    return bool(x > 0) - bool(x < 0)
+    return int(copysign(1, x)) if x != 0 else 0
