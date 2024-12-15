@@ -1,4 +1,5 @@
 import pytest
+
 # import string
 from aoc.binary_feeder import BinaryFeeder
 
@@ -46,11 +47,12 @@ def test_get_bits(hex_input, num_bits, expected_value):
 @pytest.mark.parametrize(
     "hex_input,expected_literal",
     [
-        ("D0", 0),
-        ("A0", 10),
-        ("F0", 15),
+        ("00", 0),
+        ("50", 10),
+        ("78", 15),
+        ("8FC0", 0x1F0),  # 1,000 1,1,11 11,0,0 0000 -> 0b100011111100000 -> 0x8FC0
     ],
-    ids=["zero_literal", "mid_literal", "max_literal"],
+    ids=["zero_literal", "mid_literal", "max_literal", "multi_byte_literal"],
 )
 def test_get_literal(hex_input, expected_literal):
     # Arrange

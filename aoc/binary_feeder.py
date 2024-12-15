@@ -81,13 +81,12 @@ class BinaryFeeder:
         Returns:
             int: The complete literal value extracted from the binary stream.
         """
-        while True:
+        ret_val = 0
         while True:
             c_flag = self.get_bits(1)
             part = self.get_bits(4)
             ret_val = (ret_val << 4) | part
             if c_flag == 0:
-                break
                 break
         return ret_val
 
