@@ -3,8 +3,9 @@ Advent of code 2024
 Day 12: Garden Groups
 """
 
-from collections import defaultdict, deque
+from collections import deque
 from textwrap import dedent
+from typing import Any
 
 from aoc.loader import LoaderLib
 from aoc.utility import lines_to_list
@@ -12,10 +13,25 @@ from grid import Grid
 
 
 def part1(grid: Grid) -> int:
+    """
+    This is a graph traversal problem. We can use a breadth-first search to find
+    the regions of each plant type. We can then calculate the area and perimeter
+    for each region and sum the area * perimeter for each region.
+
+    :param grid: Grid
+    :return: int
+    """
     rows = grid.height()
     cols = grid.width()
 
-    def bfs(x, y, plant_type):
+    def bfs(x, y, plant_type) -> tuple[int, int]:
+        """
+        Breadth-first search to find the regions of each plant type.
+        :param x: int representing the x-coordinate
+        :param y: int representing the y-coordinate
+        :param plant_type: str representing the plant type
+        :return: tuple of ints
+        """
         area = 0
         perimeter = 0
         queue = deque([(x, y)])
@@ -25,18 +41,25 @@ def part1(grid: Grid) -> int:
             cx, cy = queue.popleft()
             area += 1
 
+            # Check the neighbors of the current cell
             for nx, ny in grid.neighbors(cx, cy, diagonals=False):
+                # If the neighbor is the same plant type and not visited, add it to the queue
+                # and visited set. If the neighbor is not the same plant type, increment the
+                # perimeter.
                 if grid[nx, ny] == plant_type and (nx, ny) not in visited:
                     queue.append((nx, ny))
                     visited.add((nx, ny))
                 elif grid[nx, ny] != plant_type:
                     perimeter += 1
 
+        # Calculate the perimeter
         return area, perimeter
 
     visited = set()
     total_price = 0
 
+    # Iterate through the grid and find the regions of each plant type
+    # and calculate the area and perimeter.
     for i in range(rows):
         for j in range(cols):
             if (i, j) not in visited:
@@ -45,84 +68,62 @@ def part1(grid: Grid) -> int:
 
     return total_price
 
-PERIMETER = object()
 
-def part2(grid: Grid) -> int:
+def part2(lines: str) -> int:
     """
-    This is a depth first search solution, but it's not working.
+    This is a graph traversal problem. We can use a depth-first search to find
+    the regions of each plant type. We can then calculate the area, perimeter,
+    and sides of each region and sum the area * sides for each region.
 
-    The idea is to find the area of a plant type and then calculate the perimeter
-    area and sides by counting the number of sides that are not the same plant type.
-
-    The area is the number of nodes visited, the perimeter is the number of nodes
-    that are not the same plant type and the sides is the number of sides that are
-    not the same plant type.
-
-    The total price is the area times the sides and the total perimeter price is
-    the area times the perimeter.
-
-    The problem is that the total prices are not coming out as expected.
-
-    I'm going to leave this here for now and come back to it later.
+    :param lines: list of strings
+    :return: int
     """
-    rows = grid.height()
-    cols = grid.width()
-    # Going back to one of my favourite indexing methods, complex numbers. :)
-    # Create a graph using complex numbers to represent one dimension of the
-    # grid as the real part and the other as the imaginary part.
-    # This makes it easy to move in all directions as the whole grid is
-    # represented as a single one dimensional array.
-    graph = {i + j * 1j: grid[i, j] for i in range(rows) for j in range(cols)}
+    graph = {
+        (i) + (j) * 1j: e for i, row in enumerate(lines) for j, e in enumerate(row)
+    }
+    cardinal_directions, visited = (1, -1, 1j, -1j), set()
 
-    # Add a surround of "#" to the grid to stop bleed?
-    for i in range(-1, rows + 1):
-        graph[i - 1 * 1j] = graph[i + cols * 1j] = PERIMETER  # Top and bottom
-    for j in range(-1, cols + 1):
-        graph[-1 + j * 1j] = graph[rows + j * 1j] = PERIMETER  # Left and right
-
-    # Create a set of visited nodes
-    visited = set()
-
-    def dfs(visited, node, plant_type, dir):
+    def dfs(
+        position, plant_type, region, fence, direction=None
+    ) -> None | Any | tuple[int, int, int]:
         """
-        Depth first search to find the region of a plant type.
+        Depth-first search to find the regions of each plant type.
+        :param position: complex number representing the current position
+        :param plant_type: str representing the plant type
+        :param region: set of complex numbers representing the region
+        :param fence: set of tuples representing the fence
+        :param direction: complex number representing the direction
+        :return: None or tuple of ints
         """
-        if node in visited:
-            return 0, 0, 0
-        visited.add(node)
-        if graph[node] != plant_type:
-            if (
-                graph[node + dir * 1j] != plant_type
-                or graph[node - dir + dir * 1j] != plant_type
-            ):
-                return 0, 1, 1
-            return 0, 1, 0
-        area, perimeter, sides = 1, 0, 0
-        for d in [1, 1j, -1, -1j]:
-            a, p, s = dfs(visited, node + d, plant_type, d)
-            area += a
-            perimeter += p
-            sides += s
-        return area, perimeter, sides
+        # Base cases
+        # If the position is in visited and the plant type is the same as the current plant type
+        # then return None
+        if position in visited and graph.get(position) == plant_type:
+            return
+        # If the position is in visited and the plant type is not the same as the current plant type
+        # then add the position and direction to the fence
+        if graph.get(position) != plant_type:
+            return fence.add((position, direction))
+        # If the position is not in visited then add the position to visited and region
+        visited.add(position), region.add(position)
+        for direction in cardinal_directions:
+            dfs(position + direction, plant_type, region, fence, direction)
 
-    total_price = 0
-    total_perimeter_price = 0
+        # Calculate the area, perimeter, and sides of the region
+        neighbors = {(p + dr * 1j, dr) for p, dr in fence}
+        return len(region), len(fence), len(fence - neighbors)
 
-    for node in graph:
-        if node not in visited and graph[node] != PERIMETER:
-            area, perimeter, sides = dfs(visited, node, graph[node], 1)
-            print(f"Plant type = {graph[node]} {area=} {perimeter=} {sides=}")
-        total_price += area * sides
-        total_perimeter_price += area * perimeter
-        
-    # This really should be the result for both part 1 and 2 here,
-    # but there's something going adrift in the calculation.
-    return total_perimeter_price, total_price
+    regions = [dfs(p, e, set(), set()) for p, e in graph.items() if p not in visited]
+
+    # part1 = sum(area * perim for area, perim, _ in regions)
+    part2 = sum(area * sides for area, _, sides in regions)
+
+    return part2
 
 
 def main():
     loader = LoaderLib(2024)
-    testing = True
+    testing = False
     if not testing:
         input_text = loader.get_aoc_input(12)
     else:
@@ -144,7 +145,7 @@ def main():
     #     (extract_ints(param)) for param in [line for line in lines_to_list(input_text)]
     # ]
     # lines = [lines_to_list(line) for line in input_text.split("\n\n")]
-    # lines = lines_to_list(input_text)
+    lines = lines_to_list(input_text)
     grid = Grid().from_text(input_text)
 
     loader.print_solution("setup", f"{grid.width()=} {grid.height()=} ...")
@@ -165,7 +166,7 @@ def main():
     loader.print_solution(
         2,
         part2(
-            grid,
+            lines,
         ),
     )
 
@@ -173,4 +174,20 @@ def main():
 if __name__ == "__main__":
     main()
     # --
-    # -
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.004954        |        0.004954 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part setup : grid.width()=140 grid.height()=140 ...
+    # --------------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.025579        |        0.030533 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part 1   : 1533024
+    # --------------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.136817        |        0.167350 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part 2   : 910066
+    # --------------------------------------------------------------------------------
