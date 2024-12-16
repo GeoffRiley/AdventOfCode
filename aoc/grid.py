@@ -25,14 +25,14 @@ class Grid:
 
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            return self.grid.get(key, self.default)
+            return self.grid.get(tuple(key), self.default)
         else:
             return self.grid.get((key,), self.default)
 
     def __setitem__(self, key, value):
         self._ranges = {}
         if isinstance(key, tuple):
-            self.grid[key] = value
+            self.grid[tuple(key)] = value
         else:
             self.grid[(key,)] = value
 
@@ -138,7 +138,7 @@ class Grid:
         """
         Checks if the given coordinates are valid within the grid.
 
-        Determines whether the provided coordinates exist in the current grid. 
+        Determines whether the provided coordinates exist in the current grid.
         Returns a boolean indicating the presence of the coordinates.
 
         Args:
@@ -148,4 +148,14 @@ class Grid:
             bool: True if coordinates are in the grid, False otherwise.
         """
         return coords in self.grid
-    
+
+    def __str__(self):
+        rep = ""
+        for y in range(self.axis_min(1), self.axis_max(1) + 1):
+            for x in range(self.axis_min(0), self.axis_max(0) + 1):
+                rep += str(self[x, y])
+            rep += "\n"
+        return rep.strip()
+
+    def __repr__(self):
+        return str(self)

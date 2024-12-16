@@ -19,17 +19,16 @@ class Size:
     cx: int = 0
     cy: int = 0
 
-    def __add__(self, other: 'Size') -> 'Size':
+    def __add__(self, other: "Size") -> "Size":
         """Return the sum of two sizes."""
         return Size(self.cx + other.cx, self.cy + other.cy)
 
-    def __sub__(self, other: 'Size') -> 'Size':
+    def __sub__(self, other: "Size") -> "Size":
         """Return the difference of two sizes."""
         return Size(self.cx - other.cx, self.cy - other.cy)
 
 
-@dataclass
-class Point:
+class Point(tuple):
     """A point in 2-dimensional space.
 
     Attributes:
@@ -45,8 +44,15 @@ class Point:
         manhattan_distance
     """
 
-    x: int = 0
-    y: int = 0
+    # x: int = 0
+    # y: int = 0
+
+    def __new__(cls, x: int, y: int):
+        return super().__new__(cls, (x, y))
+
+    def __init__(self, x: int, y: int):
+        self.x = x
+        self.y = y
 
     def offset(self, x_offset: int, y_offset: int):
         """Offset the point by the given values."""
@@ -64,6 +70,34 @@ class Point:
     def __mul__(self, other):
         """Increase the magnitude of both dimensions."""
         return Point(self.x * other, self.y * other)
+
+    def __getitem__(self, item):
+        """Return the x or y value."""
+        if item == 0:
+            return self.x
+        elif item == 1:
+            return self.y
+        else:
+            raise IndexError("Index out of range.")
+
+    def __setitem__(self, key, value):
+        """Set the x or y value."""
+        if key == 0:
+            self.x = value
+        elif key == 1:
+            self.y = value
+        else:
+            raise IndexError("Index out of range.")
+
+    def __len__(self):
+        """Return the number of dimensions."""
+        return 2
+
+    def __eq__(self, other):
+        """Return True if the x and y values are equal."""
+        if not isinstance(other, Point):
+            return False
+        return self.x == other.x and self.y == other.y
 
     def __iter__(self):
         """Yield the x and y values."""
@@ -248,10 +282,7 @@ class Rectangle:
 
     def pt_in_rect(self, point: Point) -> bool:
         """Returns True if the given point is inside the rectangle."""
-        return (
-                self.left <= point.x <= self.right
-                and self.top <= point.y <= self.bottom
-        )
+        return self.left <= point.x <= self.right and self.top <= point.y <= self.bottom
 
     def set_empty(self) -> None:
         """Make a null rectangle by setting all coordinates to zero."""
