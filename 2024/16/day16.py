@@ -4,6 +4,7 @@ Day 16: Reindeer Maze
 """
 
 from collections import Counter, deque
+import heapq
 from textwrap import dedent
 
 from loader import LoaderLib
@@ -11,29 +12,7 @@ from utility import lines_to_list
 from grid import Grid
 
 
-def left(direction: str) -> str:
-    if direction == "N":
-        return "W"
-    if direction == "W":
-        return "S"
-    if direction == "S":
-        return "E"
-    if direction == "E":
-        return "N"
-
-
-def right(direction: str) -> str:
-    if direction == "N":
-        return "E"
-    if direction == "E":
-        return "S"
-    if direction == "S":
-        return "W"
-    if direction == "W":
-        return "N"
-
-
-def part1(grid: Grid) -> int:
+def part1(maze: Grid) -> int:
     """
     The reindeer is in a maze. He starts facing east at the start of the maze,
     marked by the letter S.
@@ -44,52 +23,97 @@ def part1(grid: Grid) -> int:
     The reindeer must get to the end of the maze, which is marked by the letter E,
     by the cheapest route possible.
     """
-    directions = {
-        "N": (-1, 0),
-        "E": (0, 1),
-        "S": (1, 0),
-        "W": (0, -1),
-    }
-    # find the start and end
-    start = end = None
+    rows = maze.height()
+    cols = maze.width()
 
-    for row in range(grid.height()):
-        for col in range(grid.width()):
-            char = grid[row, col]
-            if char == "S":
-                start = (row, col)
-            if char == "E":
-                end = (row, col)
+    # Find start (S) and end (E)
+    start = None
+    end = None
+    for r in range(rows):
+        for c in range(cols):
+            if maze[r, c] == "S":
+                start = (r, c)
+            if maze[r, c] == "E":
+                end = (r, c)
 
-    # find the path
-    path = ""
-    visited = set()
-    current = (start, "E")
-    total_cost = 0
-    queue = deque([(path, current, visited, total_cost)])
-    completed_paths = []
-    while queue:
-        path, current, visited, total_cost = queue.popleft()
-        if tuple(current) in visited:
+    # Directions: 0 = North, 1 = East, 2 = South, 3 = West
+    # dx, dy for these directions (row, col)
+    directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+
+    # Heuristic function: Manhattan distance
+    def heuristic(r, c):
+        # Simple Manhattan distance from current to end
+        return abs(r - end[0]) + abs(c - end[1])
+
+    # Priority queue for A*: entries are (f_score, cost, r, c, d)
+    # f_score = cost + heuristic
+    # cost is the g_score (actual cost so far)
+
+    # Initialize
+    start_direction = 1  # facing East initially
+    start_cost = 0
+
+    pq = []
+    heapq.heappush(
+        pq,
+        (
+            heuristic(start[0], start[1]),
+            start_cost,
+            start[0],
+            start[1],
+            start_direction,
+        ),
+    )
+
+    # Distances dictionary: (r, c, d) -> best cost found
+    dist = {(start[0], start[1], start_direction): start_cost}
+
+    cheapest_cost = float("inf")
+
+    while pq:
+        f, cost, r, c, d = heapq.heappop(pq)
+
+        # Early termination - if f_score is already worse than best solution
+        if f >= cheapest_cost:
             continue
-        visited.add(tuple(current))
-        if current[0] == end:
-            completed_paths.append([path, total_cost])
+
+        # If this is not the best known cost for this state, skip
+        if dist.get((r, c, d), float("inf")) < cost:
             continue
-        for dir in [left(current[1]), current[1], right(current[1])]:
-            new_pos = (
-                current[0][0] + directions[dir][0],
-                current[0][1] + directions[dir][1],
-            )
-            if grid[new_pos[0], new_pos[1]] == "#":
-                continue
-            if dir == current[1]:
-                new_cost = total_cost + 1
-                queue.append([path + dir, (new_pos, dir), visited, new_cost])
-            else:
-                new_cost = total_cost + 1000
-                queue.append([path + dir, (current[0], dir), visited, new_cost])
-    return min((path for path in completed_paths), key=lambda x: x[1])
+
+        # Check goal
+        if (r, c) == end:
+            # return cost  # We've reached the goal with minimal cost
+            cheapest_cost = min(cheapest_cost, cost)
+
+        # Try moving forward
+        dr, dc = directions[d]
+        nr, nc = r + dr, c + dc
+        if 0 <= nr < rows and 0 <= nc < cols and maze[nr, nc] != "#":
+            new_cost = cost + 1  # moving forward cost
+            new_state = (nr, nc, d)
+            if new_cost < dist.get(new_state, float("inf")):
+                dist[new_state] = new_cost
+                heapq.heappush(pq, (new_cost + heuristic(nr, nc), new_cost, nr, nc, d))
+
+        # Try turning left and right
+        # Turning left: (d - 1) mod 4
+        left_d = (d - 1) % 4
+        new_cost = cost + 1000
+        new_state = (r, c, left_d)
+        if new_cost < dist.get(new_state, float("inf")):
+            dist[new_state] = new_cost
+            heapq.heappush(pq, (new_cost + heuristic(r, c), new_cost, r, c, left_d))
+
+        # Turning right: (d + 1) mod 4
+        right_d = (d + 1) % 4
+        new_cost = cost + 1000
+        new_state = (r, c, right_d)
+        if new_cost < dist.get(new_state, float("inf")):
+            dist[new_state] = new_cost
+            heapq.heappush(pq, (new_cost + heuristic(r, c), new_cost, r, c, right_d))
+
+    return cheapest_cost
 
 
 def part2(lines: list[str]) -> int:
