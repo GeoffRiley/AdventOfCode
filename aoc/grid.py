@@ -52,7 +52,7 @@ class Grid:
             return (key,) in self.grid
 
     def get(self, *coords):
-        return self.grid.get(*coords, self.default)
+        return self.grid.get(*coords)
 
     def set(self, value, *coords):
         self._ranges = {}
@@ -148,6 +148,16 @@ class Grid:
             bool: True if coordinates are in the grid, False otherwise.
         """
         return coords in self.grid
+
+    def transpose(self):
+        """
+        Transposes the grid, swapping the x and y axes.
+        """
+        new_grid = Grid()
+        for x in range(self.axis_min(0), self.axis_max(0) + 1):
+            for y in range(self.axis_min(1), self.axis_max(1) + 1):
+                new_grid.set(self[x, y], y, x)
+        return new_grid
 
     def __str__(self):
         rep = ""
