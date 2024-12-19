@@ -340,7 +340,7 @@ class Grid:
         new_grid = Grid()
         for x in range(self.axis_min(0), self.axis_max(0) + 1):
             for y in range(self.axis_min(1), self.axis_max(1) + 1):
-                new_grid.set(self[x, y], y, x)
+                new_grid.set(self[x, y], (y, x))
         return new_grid
 
     def __str__(self):
