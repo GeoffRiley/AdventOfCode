@@ -1,4 +1,7 @@
 from dataclasses import dataclass
+from numbers import Complex, Number, Real
+from types import NotImplementedType
+from typing import Any, Generator, Union
 
 
 @dataclass
@@ -48,24 +51,123 @@ class Point:
     x: int = 0
     y: int = 0
 
-    def offset(self, x_offset: int, y_offset: int):
+    @property
+    def real(self) -> int:
+        return self.x
+
+    @property
+    def imag(self) -> int:
+        return self.y
+
+    def offset(self, x_offset: int, y_offset: int) -> None:
         """Offset the point by the given values."""
         self.x += x_offset
         self.y += y_offset
 
-    def __sub__(self, rhs):
-        """Return the difference of two points."""
-        return Point(self.x - rhs.x, self.y - rhs.y)
+    def __neg__(self) -> "Point":
+        """-self"""
+        x, y = self
+        return type(self)(-x, -y)
 
-    def __add__(self, rhs):
+    def __sub__(self, other: Union["Point", complex, int]) -> "Point":
+        """self - other"""
+        return self + (-other)
+
+    def __rsub__(self, other: Union["Point", complex, int]) -> "Point":
+        """other - self"""
+        return (type(self)(0, 0) + other) + (-self)
+
+    def __add__(self, other) -> Union[NotImplementedType, "Point"]:
         """Return the sum of two points."""
-        return Point(self.x + rhs.x, self.y + rhs.y)
+        x, y = self
+        if isinstance(other, (type(self), tuple)):
+            ox, oy = other
+        elif isinstance(other, Real):
+            ox, oy = other, 0
+        elif isinstance(other, Complex):
+            ox, oy = self.from_complex(other)
+        elif isinstance(other, Number):
+            ox, oy = other, 0
+        else:
+            return NotImplemented
+        return type(self)(x + ox, y + oy)
 
-    def __mul__(self, other):
-        """Increase the magnitude of both dimensions."""
-        return Point(self.x * other, self.y * other)
+    __radd__ = __add__
 
-    def __iter__(self):
+    def __mul__(self, other: Union["Point", tuple[int, int], complex, int]) -> "Point":
+        """
+        self * other
+
+        points multiply with one another like complex numbers
+        """
+        new = type(self)
+        x, y = self
+        if isinstance(other, (type(self), tuple)):
+            ox, oy = other
+        elif isinstance(other, Real):
+            return new(x * other, y * other)
+        elif isinstance(other, Complex):
+            ox, oy = self.from_complex(other)
+        elif isinstance(other, Number):
+            return new(x * other, y * other)
+        else:
+            return NotImplemented
+
+        return new(x * ox - y * oy, x * oy + y * ox)
+
+    __rmul__ = __mul__
+
+    def __mod__(self, other: Union[int, "Point", tuple[int, int]]) -> "Point":
+        """
+        self % otro
+        if other is a number apply the mod to each coordinate
+        if other is a Point apply the mod point-wise ( Point(self.x % otro.x, self.y % otro.y) )
+        """
+        if isinstance(other, int):
+            return type(self)(self.x % other, self.y % other)
+        if isinstance(other, (tuple, type(self))):
+            ox, oy = other
+            return type(self)(self.x % ox, self.y % oy)
+        return NotImplemented
+
+    def __complex__(self) -> complex:
+        return complex(self.x, self.y)
+
+    def __divmod__(
+        self, other: Union[int, "Point", tuple[int, int]]
+    ) -> tuple["Point", "Point"]:
+        """divmod(self, other)"""
+        if isinstance(other, int):
+            x, y = self
+            dx, mx = divmod(x, other)
+            dy, my = divmod(y, other)
+            return Point(dx, dy), Point(mx, my)
+        if isinstance(other, (tuple, type(self))):
+            x, y = self
+            ox, oy = other
+            dx, mx = divmod(x, ox)
+            dy, my = divmod(y, oy)
+            return Point(dx, dy), Point(mx, my)
+        return NotImplemented
+
+    def __rdivmod__(
+        self, other: Union[int, "Point", tuple[int, int]]
+    ) -> tuple["Point", "Point"]:
+        """divmod(other, self)"""
+        if isinstance(other, int):
+            x, y = self
+            dx, mx = divmod(other, x)
+            dy, my = divmod(other, y)
+            return Point(dx, dy), Point(mx, my)
+        if isinstance(other, (tuple, type(self))):
+            x, y = self
+            ox, oy = other
+            dx, mx = divmod(ox, x)
+            dy, my = divmod(oy, y)
+            return Point(dx, dy), Point(mx, my)
+        return NotImplemented
+
+    def __iter__(self) -> Generator[int, Any, None]:
         """Yield the x and y values."""
         yield self.x
         yield self.y
@@ -73,6 +175,11 @@ class Point:
     def manhattan_distance(self, other) -> int:
         """Calculate the Manhattan distance between `self` and `other`."""
         return abs(self.x - other.x) + abs(self.y - other.y)
+
+    @classmethod
+    def from_complex(cls, number: Complex) -> "Point":
+        """return an integer point from the given complex number"""
+        return cls(int(number.real), int(number.imag))
 
 
 @dataclass
