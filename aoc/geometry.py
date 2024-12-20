@@ -217,6 +217,58 @@ class Point(tuple):
 
 
 @dataclass
+class Point3:
+    """A point in 3-dimensional space.
+
+    Attributes:
+        x: int
+            horizontal offset
+        y: int
+            vertical offset
+        z: int
+            depth offset
+
+    Methods:
+        offset
+        __sub__
+        __add__
+        manhattan_distance
+    """
+
+    x: int = 0
+    y: int = 0
+    z: int = 0
+
+    def offset(self, x_offset: int, y_offset: int, z_offset: int):
+        """Offset the point by the given values."""
+        self.x += x_offset
+        self.y += y_offset
+        self.z += z_offset
+
+    def __sub__(self, rhs):
+        """Return the difference of two points."""
+        return Point3(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
+
+    def __add__(self, rhs):
+        """Return the sum of two points."""
+        return Point3(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
+
+    def __mul__(self, other):
+        """Increase the magnitude of all dimensions."""
+        return Point3(self.x * other, self.y * other, self.z * other)
+
+    def __iter__(self):
+        """Yield the x, y, and z values."""
+        yield self.x
+        yield self.y
+        yield self.z
+
+    def manhattan_distance(self, other) -> int:
+        """Calculate the Manhattan distance between `self` and `other`."""
+        return abs(self.x - other.x) + abs(self.y - other.y) + abs(self.z - other.z)
+
+
+@dataclass
 class Rectangle:
     """A rectangle in 2-dimensional space.
 
