@@ -3,49 +3,108 @@ Advent of code 2023
 Day 24: Never Tell Me The Odds
 """
 
-from collections import Counter
-from itertools import combinations, product
+from itertools import combinations
 from textwrap import dedent
+from typing import Literal
 
+import sympy as sp
 from aoc.loader import LoaderLib
-from aoc.utility import (
-    extract_ints,
-    lines_to_list,
-    to_list_int,
-    batched,
-    grouped,
-    lines_to_list_int,
-    pairwise,
-    sequence_to_int,
-    tee,
-    to_list,
-)
-from aoc.binary_feeder import BinaryFeeder
-from aoc.geometry import Point, Rectangle, Size
-from aoc.edge import Edge
-from aoc.grid import Grid
-from aoc.maths import (
-    factorial,
-    fibonacci,
-    manhattan_distance,
-    sign,
-)
-from aoc.search import (
-    astar,
-    bfs,
-    dfs,
-    binary_contains,
-    linear_contains,
-    Comparable,
-    Node,
-    PriorityQueue,
-    Queue,
-    node_to_path,
-    Stack,
-)
 
 
-def part1(vectors: list[str], test_area_min: int, test_area_max: int) -> int:
+def zero_determinant(vx1, vy1, px1, py1, px2, py2, delta_x, delta_y) -> bool:
+    """
+    Determines if two hailstone trajectories are parallel and distinct.
+
+    Checks whether two hailstone paths are parallel and do not intersect, considering special cases
+    like stationary hailstones and non-zero velocity vectors.
+
+    Args:
+        vx1 (float): X-velocity of the first hailstone.
+        vy1 (float): Y-velocity of the first hailstone.
+        px1 (float): X-position of the first hailstone.
+        py1 (float): Y-position of the first hailstone.
+        px2 (float): X-position of the second hailstone.
+        py2 (float): Y-position of the second hailstone.
+        delta_x (float): Difference in X-positions between hailstones.
+        delta_y (float): Difference in Y-positions between hailstones.
+
+    Returns:
+        bool: True if hailstones are parallel and distinct, False otherwise.
+    """
+    if vx1 == 0 and vy1 == 0:
+        # Hailstone 1 is stationary
+        if px1 != px2 or py1 != py2:
+            # Parallel and distinct
+            return True
+    else:
+        # Check if (delta_x, delta_y) is a scalar multiple of (vx1, vy1)
+        ratio_x = delta_x / vx1 if vx1 != 0 else None
+        ratio_y = delta_y / vy1 if vy1 != 0 else None
+        if ratio_x is None or ratio_y is None or abs(ratio_x - ratio_y) >= 1e-9:
+            # Lines are parallel and distinct
+            return True
+    return False
+
+
+def nonzero_determinant(
+    vx1,
+    vy1,
+    vx2,
+    vy2,
+    px1,
+    py1,
+    delta_x,
+    delta_y,
+    determminant,
+    test_area_min,
+    test_area_max,
+) -> Literal[0] | Literal[1]:
+    """
+    Determines if two hailstone trajectories intersect within a specified test area.
+
+    Calculates the intersection point of two hailstone paths and checks if it occurs in the future and within the given test area boundaries.
+
+    Args:
+        vx1 (float): X-velocity of the first hailstone.
+        vy1 (float): Y-velocity of the first hailstone.
+        vx2 (float): X-velocity of the second hailstone.
+        vy2 (float): Y-velocity of the second hailstone.
+        px1 (float): X-position of the first hailstone.
+        py1 (float): Y-position of the first hailstone.
+        delta_x (float): Difference in X-positions between hailstones.
+        delta_y (float): Difference in Y-positions between hailstones.
+        determminant (float): Calculated determinant for intersection calculation.
+        test_area_min (float): Minimum boundary of the test area.
+        test_area_max (float): Maximum boundary of the test area.
+
+    Returns:
+        int: 1 if intersection is in the future and within the test area, 0 otherwise.
+    """
+    t1 = (delta_x * vy2 - delta_y * vx2) / determminant
+    t2 = (delta_x * vy1 - delta_y * vx1) / determminant
+
+    if t1 < 0 or t2 < 0:
+        # Intersection point is behind the starting point
+        return 0
+
+    # Calculate intersection point
+    x_intersect = px1 + vx1 * t1
+    y_intersect = py1 + vy1 * t1
+
+    # Check if the intersection point is within the test area
+    if (
+        test_area_min <= x_intersect <= test_area_max
+        and test_area_min <= y_intersect <= test_area_max
+    ):
+        return 1
+    return 0
+
+
+def part1(
+    vectors: list[tuple[tuple[int, int, int], tuple[int, int, int]]],
+    test_area_min: int,
+    test_area_max: int,
+) -> int:
     """
     Vectors are pairs of tuples (position, velocity)
     where position is in a 3D space and velocity is a 3D vector
@@ -64,59 +123,90 @@ def part1(vectors: list[str], test_area_min: int, test_area_max: int) -> int:
     test area of (test_area_min, test_area_min) to
     (test_area_,max, test_area_max) units.
     """
-    paths_crossed = 0
-    for vec1, vec2 in combinations(vectors, 2):
-        pos1, vel1 = vec1
-        pos2, vel2 = vec2
+    intersections = 0
+    for (pos1, vel1), (pos2, vel2) in combinations(vectors, 2):
         # Ignore the z-axis
         px1, py1, _ = pos1
         px2, py2, _ = pos2
         vx1, vy1, _ = vel1
         vx2, vy2, _ = vel2
 
-        # If the hailstones are moving in the same direction
-        # they will never cross paths.
-        if (vx1, vy1) == (vx2, vy2):
-            continue
+        # Compute the determinant
+        determminant = vx1 * vy2 - vx2 * vy1
 
-        # If the hailstones are moving in parallel lines
-        # they will never cross paths.
-        if (vx1 * vy2) == (vx2 * vy1):
-            continue
+        # Lines are parallel (could be coincident)
+        # Check if they are coincident
+        # To do this, check if (P2 - P1) is parallel to V1
+        delta_x = px2 - px1
+        delta_y = py2 - py1
+        if determminant == 0:
+            if zero_determinant(
+                vx1,
+                vy1,
+                px1,
+                py1,
+                px2,
+                py2,
+                delta_x,
+                delta_y,
+            ):
+                continue
+        else:
+            intersections += nonzero_determinant(
+                vx1,
+                vy1,
+                vx2,
+                vy2,
+                px1,
+                py1,
+                delta_x,
+                delta_y,
+                determminant,
+                test_area_min,
+                test_area_max,
+            )
 
-        # Calculate the point of intersection
-        # regardless of time
-        # y = m1 * x + b1
-        # y = m2 * x + b2
-        # m1 * x + b1 = m2 * x + b2
-        # m1 * x - m2 * x = b2 - b1
-        # x * (m1 - m2) = b2 - b1
-        # x = (b2 - b1) / (m1 - m2)
-
-        # Calculate the intersection point
-        denominator_x = vx1 - vx2
-        denominator_y = vy1 - vy2
-        if denominator_x == 0 or denominator_y == 0:
-            continue
-
-        x = ((py2 - py1) * (vx1 - vx2) - (px2 - px1) * (vy1 - vy2)) / denominator_x
-        y = ((py2 - py1) * (vy1 - vy2) - (px2 - px1) * (vx1 - vx2)) / denominator_y
-
-        # Check if the intersection point is within the test area
-        if test_area_min <= x <= test_area_max and test_area_min <= y <= test_area_max:
-            paths_crossed += 1
-
-    return paths_crossed
+    return intersections
 
 
-def part2(vectors: list[str], test_area_min: int, test_area_max: int) -> int:
-    """ """
-    ...
+def part2(
+    vectors: list[tuple[tuple[int, int, int], tuple[int, int, int]]],
+    test_area_min: int,
+    test_area_max: int,
+) -> int:
+    """
+    Determines the exact initial position and velocity of the rock so that it collides with all hailstones.
+    Returns the sum of the X, Y, and Z coordinates of the rock's initial position.
+
+    Args:
+        vectors: A list of tuples, each containing position and velocity tuples.
+                 Position is (x, y, z) and velocity is (vx, vy, vz).
+
+    Returns:
+        The sum x0 + y0 + z0 of the rock's initial position.
+    """
+    # Here we go, trying sympy to solve the equations
+    # Try working with the first three hailstones to start.
+    hailstones = vectors[:3]
+    unknowns = sp.symbols("x y z dx dy dz t1 t2 t3")
+    x, y, z, dx, dy, dz, *time = unknowns
+
+    equations = []  # build system of 9 equations with 9 unknowns
+    for t, h in zip(time, hailstones):
+        equations.extend(
+            (
+                sp.Eq(x + t * dx, h[0][0] + t * h[1][0]),
+                sp.Eq(y + t * dy, h[0][1] + t * h[1][1]),
+                sp.Eq(z + t * dz, h[0][2] + t * h[1][2]),
+            )
+        )
+    solution = sp.solve(equations, unknowns).pop()
+    return sum(solution[:3])
 
 
 def main():
     loader = LoaderLib(2023)
-    testing = True
+    testing = False
     if not testing:
         input_text = loader.get_aoc_input(24)
         test_area_min = 200_000_000_000_000
@@ -169,4 +259,20 @@ def main():
 if __name__ == "__main__":
     main()
     # --
-    # -
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.001033        |        0.001033 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part setup : len(vectors)=300 ...
+    # --------------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.023334        |        0.024368 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part 1   : 12783
+    # --------------------------------------------------------------------------------
+
+    # --------------------------------------------------------------------------------
+    # LAP -> 0.146741        |        0.171109 <- ELAPSED
+    # --------------------------------------------------------------------------------
+    # Part 2   : 948485822969419
+    # --------------------------------------------------------------------------------
