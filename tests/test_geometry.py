@@ -1,4 +1,5 @@
 import pytest
+
 from aoc.geometry import Size, Point, Rectangle
 
 
@@ -266,3 +267,39 @@ def test_rectangle_invalid_addition():
     with pytest.raises(TypeError):
         # Act
         rect + 5
+
+
+# Rectangle.crosses tests
+@pytest.mark.parametrize(
+    "rect, a, b, expected",
+    [
+        # Cross through interior (horizontal line)
+        (Rectangle(0, 0, 10, 10), Point(-5, 5), Point(15, 5), True),
+        # Miss entirely (top-left outside)
+        (Rectangle(0, 0, 10, 10), Point(-5, -5), Point(-1, -1), False),
+        # Touch exactly at a corner
+        (Rectangle(0, 0, 10, 10), Point(-1, -1), Point(0, 0), False),
+        # Lie along the top edge
+        (Rectangle(0, 0, 10, 10), Point(0, 0), Point(10, 0), False),
+        # Colinear with edge but no overlap (entirely left of rectangle)
+        (Rectangle(0, 0, 10, 10), Point(-5, 0), Point(-1, 0), False),
+        # Diagonal crossing near corners
+        (Rectangle(0, 0, 10, 10), Point(-1, 11), Point(11, -1), True),
+        # One endpoint inside rectangle
+        (Rectangle(0, 0, 10, 10), Point(1, 1), Point(20, 20), True),
+        # Touch edge at a single interior point
+        (Rectangle(0, 0, 10, 10), Point(-1, 5), Point(0, 5), False),
+    ],
+    ids=[
+        "interior_cross",
+        "clear_miss",
+        "corner_touch",
+        "along_edge",
+        "colinear_no_overlap",
+        "diagonal_cross",
+        "endpoint_inside",
+        "edge_touch_point",
+    ],
+)
+def test_rectangle_crosses(rect, a, b, expected):
+    assert rect.crosses(a, b) is expected

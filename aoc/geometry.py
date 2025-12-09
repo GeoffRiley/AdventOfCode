@@ -57,6 +57,12 @@ class Point(tuple):
         self.x = x
         self.y = y
 
+    def __repr__(self) -> str:
+        return f"Point({self.x}, {self.y})"
+
+    def __str__(self) -> str:
+        return f"({self.x}, {self.y})"
+
     @property
     def real(self) -> int:
         return self.x
@@ -125,9 +131,9 @@ class Point(tuple):
 
     def __mod__(self, other: Union[int, "Point", tuple[int, int]]) -> "Point":
         """
-        self % otro
+        self % other
         if other is a number apply the mod to each coordinate
-        if other is a Point apply the mod point-wise ( Point(self.x % otro.x, self.y % otro.y) )
+        if other is a Point apply the mod point-wise ( Point(self.x % other.x, self.y % other.y) )
         """
         if isinstance(other, int):
             return type(self)(self.x % other, self.y % other)
@@ -269,58 +275,6 @@ class Point3:
 
 
 @dataclass
-class Point3:
-    """A point in 3-dimensional space.
-
-    Attributes:
-        x: int
-            horizontal offset
-        y: int
-            vertical offset
-        z: int
-            depth offset
-
-    Methods:
-        offset
-        __sub__
-        __add__
-        manhattan_distance
-    """
-
-    x: int = 0
-    y: int = 0
-    z: int = 0
-
-    def offset(self, x_offset: int, y_offset: int, z_offset: int):
-        """Offset the point by the given values."""
-        self.x += x_offset
-        self.y += y_offset
-        self.z += z_offset
-
-    def __sub__(self, rhs):
-        """Return the difference of two points."""
-        return Point3(self.x - rhs.x, self.y - rhs.y, self.z - rhs.z)
-
-    def __add__(self, rhs):
-        """Return the sum of two points."""
-        return Point3(self.x + rhs.x, self.y + rhs.y, self.z + rhs.z)
-
-    def __mul__(self, other):
-        """Increase the magnitude of all dimensions."""
-        return Point3(self.x * other, self.y * other, self.z * other)
-
-    def __iter__(self):
-        """Yield the x, y, and z values."""
-        yield self.x
-        yield self.y
-        yield self.z
-
-    def manhattan_distance(self, other) -> int:
-        """Calculate the Manhattan distance between `self` and `other`."""
-        return abs(self.x - other.x) + abs(self.y - other.y) + abs(self.z - other.z)
-
-
-@dataclass
 class Rectangle:
     """A rectangle in 2-dimensional space.
 
@@ -356,12 +310,39 @@ class Rectangle:
         set_position
         size
         union
+        crosses
+        pt_in_rect
+        from_points
     """
 
     left: int = 0
     top: int = 0
     right: int = 0
     bottom: int = 0
+
+    @classmethod
+    def from_points(cls, point_a: Point | tuple[int, int],
+                    point_b: Point | tuple[int, int]) -> "Rectangle":
+        """Create a rectangle from two points or coordinate tuples.
+
+        Returns a Rectangle whose sides are aligned with the axes and which contains both points.
+
+        Args:
+            point_a: The first point or (x, y) tuple.
+            point_b: The second point or (x, y) tuple.
+
+        Returns:
+            Rectangle: The rectangle defined by the two points.
+        """
+        if isinstance(point_a, tuple):
+            point_a = Point(*point_a)
+        if isinstance(point_b, tuple):
+            point_b = Point(*point_b)
+        left = min(point_a.x, point_b.x)
+        top = min(point_a.y, point_b.y)
+        right = max(point_a.x, point_b.x)
+        bottom = max(point_a.y, point_b.y)
+        return cls(left, top, right, bottom)
 
     def bottom_right(self) -> Point:
         """Return the bottom-right point of the rectangle."""
@@ -521,3 +502,76 @@ class Rectangle:
             max(self.right, other.right),
             max(self.bottom, other.bottom),
         )
+
+    def area(self) -> int:
+        """Return the area of the rectangle."""
+        return (self.right - self.left + 1) * (self.bottom - self.top + 1)
+
+    def crosses(self, point_a: Point, point_b: Point) -> bool:
+        """Return True iff the segment AB enters the rectangle's interior.
+
+        Boundary is excluded: merely touching an edge, lying along an edge,
+        or touching exactly at a corner must return False. Only when some
+        non-zero portion of the segment lies strictly inside the rectangle
+        (left < x < right and top < y < bottom) should this return True.
+
+        Uses Liang–Barsky clipping with a strict interior check.
+
+        Args:
+            point_a: The first endpoint of the line segment.
+            point_b: The second endpoint of the line segment.
+
+        Returns:
+            bool: True if the segment has non-zero measure inside the open
+                  rectangle, False otherwise.
+        """
+        ax, ay = point_a.x, point_a.y
+        bx, by = point_b.x, point_b.y
+        dx = bx - ax
+        dy = by - ay
+
+        # Trivial rejection via bounding boxes
+        if max(ax, bx) < self.left or min(ax, bx) > self.right:
+            return False
+        if max(ay, by) < self.top or min(ay, by) > self.bottom:
+            return False
+
+        # Helper: strict interior test (open rectangle)
+        def inside_open(x: float, y: float) -> bool:
+            return (self.left < x < self.right) and (self.top < y < self.bottom)
+
+        # Degenerate segment
+        if dx == 0 and dy == 0:
+            return inside_open(ax, ay)
+
+        # If any endpoint is strictly inside, it enters interior
+        if inside_open(ax, ay) or inside_open(bx, by):
+            return True
+
+        # Liang–Barsky parametric clipping test against the rectangle
+        p = (-dx, dx, -dy, dy)
+        q = (ax - self.left, self.right - ax, ay - self.top, self.bottom - ay)
+
+        u1, u2 = 0.0, 1.0
+        for pi, qi in zip(p, q):
+            if pi == 0:
+                # Segment is parallel to this boundary; if outside, no intersection
+                if qi < 0:
+                    return False
+            else:
+                t = qi / pi
+                if pi < 0:
+                    if t > u1:
+                        u1 = t
+                else:
+                    if t < u2:
+                        u2 = t
+                if u1 > u2:
+                    return False
+
+        # We have an intersection with the CLOSED rectangle on [u1, u2].
+        # Check if any interior point of the clipped segment lies strictly inside.
+        t_mid = (u1 + u2) / 2.0
+        x_mid = ax + t_mid * dx
+        y_mid = ay + t_mid * dy
+        return inside_open(x_mid, y_mid)
