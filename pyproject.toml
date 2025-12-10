@@ -8,4 +8,6 @@ dependencies = [
     "pandas-stubs==2.3.3.251201",
     "pytest==9.0.2",
     "requests>=2.32.5",
+    "scipy>=1.16.3",
+    "scipy-stubs~=1.16.3",
 ]
