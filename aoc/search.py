@@ -1,4 +1,6 @@
+import itertools
 from collections import deque
+from functools import lru_cache
 from heapq import heappush, heappop
 from typing import (
     TypeVar,
@@ -39,7 +41,7 @@ class Comparable(Protocol):
 
     def __gt__(self: _C, other: _C) -> bool:
         """Return True if self > other"""
-        return (not self < other) and self != other
+        return other < self
 
     def __le__(self: _C, other: _C) -> bool:
         """Return True if self <= other"""
@@ -50,8 +52,21 @@ class Comparable(Protocol):
         return not self < other
 
 
-def binary_contains(sequence: Sequence[Comparable], key: Comparable) -> bool:
-    """Return True if key is in sequence"""
+def binary_contains(
+        sequence: Sequence[Comparable],
+        key: Comparable,
+        check_sorted: bool = False
+) -> bool:
+    """
+    Return True if key is in sequence using binary search.
+
+    The input sequence must be sorted in ascending order.
+
+    If check_sorted is True, a ValueError is raised if the sequence is not sorted.
+    """
+    if check_sorted and any(sequence[i] > sequence[i + 1] for i in range(len(sequence) - 1)):
+        raise ValueError("Input sequence must be sorted in ascending order for binary search.")
+
     low: int = 0
     high: int = len(sequence) - 1
     while low <= high:
@@ -64,6 +79,10 @@ def binary_contains(sequence: Sequence[Comparable], key: Comparable) -> bool:
             return True
     return False
 
+
+class StackEmptyError(Exception):
+    """Raised when attempting to pop from an empty stack."""
+    pass
 
 class Stack(Generic[_T]):
     """LIFO stack"""
@@ -82,7 +101,14 @@ class Stack(Generic[_T]):
         self._container.append(item)
 
     def pop(self) -> _T:
-        """Remove and return the top item from the stack"""
+        """
+        Remove and return the top item from the stack.
+
+        Raises:
+            StackEmptyError: If the stack is empty.
+        """
+        if self.empty:
+            raise StackEmptyError("Cannot pop from an empty stack.")
         return self._container.pop()
 
     def clear(self) -> None:
@@ -226,6 +252,7 @@ def astar(
     goal_test: Callable[[_T], bool],
     successors: Callable[[_T], List[_T]],
     heuristic: Callable[[_T], float],
+        cost: Callable[[_T, _T], float] = None,
 ) -> Optional[Node[_T]]:
     """A* search"""
     # 1. Create a priority queue
@@ -243,6 +270,8 @@ def astar(
     frontier: PriorityQueue[Node[_T]] = PriorityQueue()
     frontier.push(Node(initial, None, 0.0, heuristic(initial)))
     explored: Dict[_T, float] = {initial: 0.0}
+    if cost is None:
+        cost = lambda a, b: 1
 
     # keep going while there is more to explore
     # and the goal has not been reached
@@ -252,8 +281,116 @@ def astar(
         if goal_test(current_state):
             return current_node
         for child in successors(current_state):
-            new_cost: float = current_node.cost + 1
+            step_cost = cost(current_state, child)
+            new_cost: float = current_node.cost + step_cost
             if child not in explored or explored[child] > new_cost:
                 explored[child] = new_cost
                 frontier.push(Node(child, current_node, new_cost, heuristic(child)))
     return None
+
+
+def all_paths(
+        start: _T,
+        goal: _T,
+        successors: Callable[[_T], List[_T]],
+) -> List[List[_T]]:
+    """
+    Find all paths from start to goal in a graph.
+
+    Args:
+        start: The starting node.
+        goal: The goal node.
+        successors: Function that returns a list of successors for a node.
+
+    Returns:
+        A list of paths, where each path is a list of nodes from start to goal.
+    """
+
+    @lru_cache(maxsize=None)
+    def _all_paths(
+            current: _T,
+            goal: _T,
+            path: tuple,
+            visited: frozenset,
+    ) -> List[List[_T]]:
+        if current == goal:
+            return [list(path + (current,))]
+        paths = []
+        for neighbor in successors(current):
+            if neighbor not in visited:
+                new_paths = _all_paths(
+                    neighbor,
+                    goal,
+                    path + (current,),
+                    visited | frozenset([current]),
+                )
+                paths.extend(new_paths)
+        return paths
+
+    return _all_paths(start, goal, tuple(), frozenset())
+
+
+# Implement Karp's algorithm
+def karp(edges: dict[str, list[tuple[str, float]]]) -> list[str]:
+    """
+    Find the minimum mean cycle in a directed graph using Karp's algorithm.
+
+    Args:
+        edges: dict mapping node to list of (neighbor, weight) tuples
+
+    Returns:
+        The minimum mean cycle as a list of nodes, or an empty list if no cycle exists.
+    """
+    nodes = list(edges.keys())
+    n = len(nodes)
+    node_idx = {node: i for i, node in enumerate(nodes)}
+
+    # dp[k][v] = min cost to reach v in exactly k steps
+    dp = [[float('inf')] * n for _ in range(n + 1)]
+    parent = [[-1] * n for _ in range(n + 1)]
+
+    # Initialize: cost to reach each node in 0 steps is 0
+    for v in range(n):
+        dp[0][v] = 0
+
+    # Dynamic programming: for each k steps, update costs
+    for k, v in itertools.product(range(1, n + 1), range(n)):
+        for u, w in edges.get(nodes[v], []):
+            u_idx = node_idx[u]
+            if dp[k - 1][u_idx] + w < dp[k][v]:
+                dp[k][v] = dp[k - 1][u_idx] + w
+                parent[k][v] = u_idx
+
+    # Find minimum mean cycle
+    min_mean = float('inf')
+    end_node = -1
+    start_k = -1
+
+    for v in range(n):
+        max_mean = -float('inf')
+        for k in range(n):
+            if dp[n][v] < float('inf') and dp[k][v] < float('inf') and n != k:
+                mean = (dp[n][v] - dp[k][v]) / (n - k)
+                if mean < min_mean:
+                    min_mean = mean
+                    end_node = v
+                    start_k = k
+
+    # Reconstruct the cycle
+    if end_node == -1:
+        return []
+
+    # Backtrack to get the cycle
+    cycle = []
+    visited = set()
+    k = n
+    v = end_node
+    for _ in range(n):
+        v = parent[k][v]
+        k -= 1
+        if v in visited or v == -1:
+            break
+        visited.add(v)
+        cycle.append(nodes[v])
+    cycle.reverse()
+    return cycle
